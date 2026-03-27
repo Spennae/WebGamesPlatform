@@ -1,10 +1,23 @@
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
+import { Typeracer } from './Typeracer';
 
 export function PlayPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const gameName = slug === 'typeracer' ? 'TypeRacer' : slug;
+  if (slug === 'typeracer') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="page-header">
+          <h1 className="page-title">TypeRacer</h1>
+          <p className="page-subtitle">Race against the clock</p>
+        </div>
+        <Typeracer />
+      </div>
+    );
+  }
+
+  const gameName = slug;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
