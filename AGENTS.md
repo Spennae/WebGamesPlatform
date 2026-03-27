@@ -34,7 +34,8 @@ WebGamesPlatform/
 │   │   ├── services/    # API client services
 │   │   └── types/      # TypeScript type definitions
 │   └── package.json
-├── engines/             # Game services (future)
+├── engines/             # Game services
+│   └── typeracer/       # TypeRacer typing game engine (Go + WebSockets)
 ├── db/                  # Database scripts
 ├── docker/              # Docker configurations
 └── scripts/             # Utility scripts (start.sh, stop.sh)
@@ -207,3 +208,39 @@ curl http://localhost:5000/api/games
 - Scores are stored through the API, not directly from engines
 - The platform is designed to be extensible - new games can be added as separate services
 - Keep this file updated when project structure or conventions change
+
+## Game Implementation Pattern
+
+### Rules Page Pattern
+Each game should have a rules page that displays before starting the game:
+1. Game title and description
+2. Numbered steps explaining how to play
+3. "Play" button to start the game
+4. "Back to Games" link
+
+Example in `PlayPage.tsx`:
+```tsx
+type GamePhase = 'rules' | 'playing';
+
+function GameRules({ onPlay }: { onPlay: () => void }) {
+  return (
+    <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
+      {/* Rules content */}
+      <button onClick={onPlay}>Play</button>
+    </div>
+  );
+}
+
+export function PlayPage() {
+  const [phase, setPhase] = useState<GamePhase>('rules');
+  // Render rules or game based on phase
+}
+```
+
+### TypeRacer Game (Phase 3 - Complete)
+- **Go WebSocket server** at `/engines/typeracer` with 100 text samples
+- **Rules page** at `/play/typeracer` before starting
+- **Live WPM tracking** during gameplay
+- **Score submission** to API leaderboard
+- **Leaderboard display** after race completion
+- **"Race Again" button** with WebSocket reconnection
