@@ -1,23 +1,31 @@
+import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 
 export function PlayPage() {
   const { slug } = useParams<{ slug: string }>();
 
+  const gameName = slug === 'typeracer' ? 'TypeRacer' : slug;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-4 text-center">
-        {slug === 'typeracer' ? 'TypeRacer' : slug}
-      </h1>
-      <p className="text-center text-gray-600 mb-8">
-        Game coming soon...
-      </p>
-      <div className="bg-gray-100 rounded-lg p-8 text-center">
-        <p className="text-lg">
-          The {slug} game engine is not yet implemented.
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="page-header">
+        <h1 className="page-title">{gameName}</h1>
+        <p className="page-subtitle">Game coming soon...</p>
+      </div>
+
+      <div className="card text-center">
+        <div className="mb-6">
+          <span className="tag tag-blue text-sm px-4 py-2">Coming Soon</span>
+        </div>
+        <p className="text-lg text-text-primary mb-4">
+          The {gameName} game engine is currently under development.
         </p>
-        <p className="text-gray-500 mt-2">
-          Check back later!
+        <p className="text-text-secondary mb-8">
+          We're working hard to bring you an exciting gaming experience.
         </p>
+        <Link to="/" className="btn btn-secondary">
+          Back to Games
+        </Link>
       </div>
     </div>
   );

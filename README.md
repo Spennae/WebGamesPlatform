@@ -73,3 +73,7 @@ MYSQL_DATABASE=webgames
 Test your typing speed! Race against the clock and climb the leaderboard.
 
 (Coming soon: multiplayer mode)
+
+## Documentation
+
+- [Frontend Style Guide](docs/style-guide.md) - Design tokens, component specs, and styling rules

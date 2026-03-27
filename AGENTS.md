@@ -71,6 +71,12 @@ WebGamesPlatform/
 - Use functional components with hooks
 - Tailwind CSS for styling
 
+### Styling
+- **See [docs/style-guide.md](docs/style-guide.md)** for full styling conventions
+- Use design tokens from `src/styles/design-tokens.css`
+- Keep UI neutral (90%) with accents (10%)
+- No raw hex colors - use CSS variables only
+
 ### Configuration
 - All settings in `appsettings.json`
 - Environment-specific: `appsettings.Development.json`

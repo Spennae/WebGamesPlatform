@@ -10,8 +10,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="spinner spinner-lg"></div>
+        <p className="text-text-secondary">Loading...</p>
       </div>
     );
   }
