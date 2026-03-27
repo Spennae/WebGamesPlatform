@@ -16,14 +16,20 @@ interface UseWebSocketReturn {
   sendMessage: (message: Partial<GameMessage>) => void;
 }
 
-export function useWebSocket(url: string): UseWebSocketReturn {
+export function useWebSocket(url: string, enabled: boolean = true): UseWebSocketReturn {
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
   const [lastMessage, setLastMessage] = useState<GameMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number>(0);
 
-  const connect = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  useEffect(() => {
+    if (!enabled) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setStatus('disconnected');
+      return;
+    }
 
     setStatus('connecting');
 
@@ -49,22 +55,15 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
     ws.onclose = () => {
       setStatus('disconnected');
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 3000);
     };
-  };
-
-  useEffect(() => {
-    connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
-      wsRef.current?.close();
     };
-  }, [url]);
+  }, [url, enabled]);
 
   const sendMessage = (message: Partial<GameMessage>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

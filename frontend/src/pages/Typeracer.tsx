@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 type GamePhase = 'waiting' | 'playing' | 'finished';
 
@@ -19,13 +17,21 @@ export function Typeracer() {
   const [finalAccuracy, setFinalAccuracy] = useState(0);
   const [userInput, setUserInput] = useState('');
 
-  const wsUrl = `ws://${new URL(API_URL).host}/api/engine/typeracer`;
-  const { status, lastMessage, sendMessage } = useWebSocket(wsUrl);
+  const wsUrl = `ws://localhost:5000/api/engine/typeracer`;
+  const wsEnabled = phase !== 'finished';
+  const { status, lastMessage, sendMessage } = useWebSocket(wsUrl, wsEnabled);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number>(0);
+  const textRef = useRef('');
+  const currentIndexRef = useRef(0);
+  const errorsRef = useRef(0);
+
+  useEffect(() => { textRef.current = text; }, [text]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
+  useEffect(() => { errorsRef.current = errors; }, [errors]);
 
   useEffect(() => {
-    if (lastMessage?.type === 'gameStart' && lastMessage.text) {
+    if (phase === 'waiting' && lastMessage?.type === 'gameStart' && lastMessage.text) {
       setText(lastMessage.text);
       setPhase('playing');
       setCurrentIndex(0);
@@ -36,55 +42,45 @@ export function Typeracer() {
       inputRef.current?.focus();
     }
 
-    if (lastMessage?.type === 'gameEnd') {
-      if (lastMessage.wpm !== undefined) setFinalWpm(lastMessage.wpm);
-      if (lastMessage.accuracy !== undefined) setFinalAccuracy(lastMessage.accuracy);
+    if (phase === 'playing' && lastMessage?.type === 'gameEnd') {
+      const wpm = lastMessage.wpm ?? 0;
+      const accuracy = lastMessage.accuracy ?? 0;
+      setFinalWpm(wpm);
+      setFinalAccuracy(accuracy);
       setPhase('finished');
       if (timerRef.current) clearInterval(timerRef.current);
+      submitScore(wpm, accuracy);
     }
-  }, [lastMessage]);
+  }, [lastMessage, phase]);
 
   useEffect(() => {
-    if (phase === 'playing' && startTime) {
-      timerRef.current = window.setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = Math.max(0, 60 - elapsed);
-        setTimeLeft(remaining);
+    if (phase !== 'playing' || !startTime) return;
 
-        if (remaining === 0) {
-          finishGame();
-        }
-      }, 100);
-    }
+    timerRef.current = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining === 0) {
+        finishGame();
+      }
+    }, 100);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [phase, startTime]);
 
-  const finishGame = useCallback(() => {
+  const finishGame = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    sendMessage({ type: 'finish', progress: currentIndex, errors });
-    setPhase('finished');
-
-    const elapsed = startTime ? (Date.now() - startTime) / 1000 : 60;
-    const minutes = elapsed / 60;
-    const wpm = Math.round((currentIndex / 5) / minutes * 100) / 100;
-    const accuracy = currentIndex + errors > 0 
-      ? Math.round((currentIndex / (currentIndex + errors)) * 10000) / 100 
-      : 100;
-
-    setFinalWpm(wpm);
-    setFinalAccuracy(accuracy);
-
-    submitScore(wpm, accuracy);
-  }, [currentIndex, errors, startTime, sendMessage]);
+    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
+  };
 
   const submitScore = async (wpm: number, accuracy: number) => {
     try {
       await api.post('/api/scores', {
         gameSlug: 'typeracer',
-        score: Math.round(wpm * 100),
+        value: Math.round(wpm * 100),
         metadata: { wpm, accuracy }
       });
     } catch (e) {
@@ -98,9 +94,9 @@ export function Typeracer() {
     const value = e.target.value;
     const charIndex = value.length - 1;
 
-    if (charIndex >= 0 && charIndex < text.length) {
-      const isCorrect = value[charIndex] === text[charIndex];
-      const prevCorrect = charIndex > 0 ? value[charIndex - 1] === text[charIndex - 1] : true;
+    if (charIndex >= 0 && charIndex < textRef.current.length) {
+      const isCorrect = value[charIndex] === textRef.current[charIndex];
+      const prevCorrect = charIndex > 0 ? value[charIndex - 1] === textRef.current[charIndex - 1] : true;
 
       if (!isCorrect && prevCorrect) {
         setErrors(prev => prev + 1);
@@ -109,9 +105,9 @@ export function Typeracer() {
       setCurrentIndex(value.length);
       setUserInput(value);
 
-      sendMessage({ type: 'typing', progress: value.length, errors });
+      sendMessage({ type: 'typing', progress: value.length, errors: errorsRef.current });
 
-      if (value.length >= text.length) {
+      if (value.length >= textRef.current.length) {
         finishGame();
       }
     } else {
@@ -123,16 +119,6 @@ export function Typeracer() {
     if (e.key === 'Tab') {
       e.preventDefault();
     }
-  };
-
-  const startNewGame = () => {
-    setPhase('waiting');
-    setText('');
-    setCurrentIndex(0);
-    setErrors(0);
-    setUserInput('');
-    setFinalWpm(0);
-    setFinalAccuracy(0);
   };
 
   const renderText = () => {
@@ -155,26 +141,6 @@ export function Typeracer() {
     });
   };
 
-  if (status === 'connecting' || status === 'disconnected') {
-    return (
-      <div className="text-center py-12">
-        <div className="spinner mb-4"></div>
-        <p className="text-text-secondary">Connecting to game server...</p>
-      </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="text-center py-12">
-        <p className="text-accent-red mb-4">Failed to connect to game server</p>
-        <button onClick={startNewGame} className="btn btn-primary">
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   if (phase === 'finished') {
     return (
       <div className="card text-center">
@@ -193,8 +159,26 @@ export function Typeracer() {
           </div>
         </div>
 
-        <button onClick={startNewGame} className="btn btn-primary">
-          Race Again
+        <p className="text-text-secondary">Refresh page to race again</p>
+      </div>
+    );
+  }
+
+  if (status === 'connecting' || status === 'disconnected') {
+    return (
+      <div className="text-center py-12">
+        <div className="spinner mb-4"></div>
+        <p className="text-text-secondary">Connecting to game server...</p>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="text-center py-12">
+        <p className="text-accent-red mb-4">Failed to connect to game server</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
+          Retry
         </button>
       </div>
     );
