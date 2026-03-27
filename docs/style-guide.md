@@ -4,18 +4,18 @@
 
 ## Overview
 
-The platform uses a dark minimal design inspired by Catppuccin Mocha palette. The system prioritizes consistency over creativity.
+The platform uses a **soft dark minimal** design inspired by Catppuccin Mocha. The system prioritizes cohesion, using tone differences for layering instead of borders.
 
 ---
 
 ## Design Philosophy
 
 - **90% neutral, 10% accent** - UI remains predominantly neutral
-- **Use tone differences** instead of borders
-- **Layers should feel blended**, not stacked
+- **Use tone differences** instead of borders for layering
+- **Layers should feel like one continuous surface**, not stacked boxes
 - **No harsh contrasts** - soft transitions between surfaces
-- **Subtle shadows and glows** for depth
-- **Rounded corners** for a modern feel
+- **No borders** - separation comes from subtle tone shifts
+- **Rounded corners** for a modern, cohesive feel
 
 ---
 
@@ -29,41 +29,46 @@ The platform uses a dark minimal design inspired by Catppuccin Mocha palette. Th
   --bg-primary: #1e1e2e;
   --bg-secondary: #181825;
   
-  /* Surface Colors */
-  --surface: #2b2c3f;
-  --surface-soft: #313244;
-  --highlight: #45475a;
+  /* Surface Colors (3-tone system) */
+  --surface: #2b2c3f;      /* Base layer */
+  --surface-soft: #313244;  /* Elevated layer */
+  --highlight: #45475a;      /* Highlight layer */
   
   /* Text Colors */
   --text-primary: #cdd6f4;
   --text-secondary: #a6adc8;
   --text-muted: #6c7086;
   
-  /* Accent Colors */
+  /* Accent Colors (use sparingly) */
   --accent-blue: #89b4fa;
   --accent-mauve: #cba6f7;
   --accent-green: #a6e3a1;
   --accent-yellow: #f9e2af;
   --accent-red: #f38ba8;
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 ```
+
+### Tone System (3 Layers)
+
+| Layer | Color | Usage |
+|-------|-------|-------|
+| Base | `--surface` | Cards, containers |
+| Elevated | `--surface-soft` | Stat boxes, nested elements |
+| Highlight | `--highlight` | Hover states, rank badges |
 
 ### Color Usage Rules
 
 | Element | Allowed Colors |
 |---------|---------------|
-| Page background | `--bg-primary`, `--bg-secondary` |
-| Card/surface | `--surface`, `--surface-soft` |
+| Page background | `--bg-primary` |
+| Card/surface | `--surface` |
+| Nested elements | `--surface-soft` |
+| Hover states | `--highlight` |
 | Text | `--text-primary`, `--text-secondary`, `--text-muted` |
-| Primary buttons | `--accent-blue` (gradient allowed) |
-| Success | `--accent-green` |
-| Error | `--accent-red` |
-| Borders | `--highlight`, `--surface-soft` |
+| Primary actions | `--accent-blue` (with opacity) |
+| Success stats | `--accent-green` |
+| Error stats | `--accent-red` |
+| Rank badges | Accent colors with 20-25% opacity |
 
 ---
 
@@ -80,8 +85,6 @@ Uses an **8px base scale**.
 --space-6: 1.5rem;    /* 24px */
 --space-8: 2rem;      /* 32px */
 --space-10: 2.5rem;   /* 40px */
---space-12: 3rem;     /* 48px */
---space-16: 4rem;     /* 64px */
 ```
 
 ---
@@ -101,18 +104,25 @@ font-family: 'Inter', system-ui, -apple-system, sans-serif;
 --text-lg: 1.125rem;
 --text-xl: 1.25rem;
 --text-2xl: 1.5rem;
+--text-3xl: 1.875rem;
 --text-4xl: 2.25rem;
 ```
+
+### Hierarchy Rules
+- Titles: `font-weight: 600` (semibold), not bold
+- Secondary text: muted color
+- Hierarchy comes from size, not color
 
 ---
 
 ## Border Radius
 
 ```css
---radius-md: 0.5rem;
---radius-lg: 0.75rem;
---radius-xl: 1rem;
---radius-full: 9999px;
+--radius-sm: 8px;
+--radius-md: 12px;
+--radius-lg: 16px;
+--radius-xl: 20px;
+--radius-full: 9999px;  /* Pills, badges */
 ```
 
 ---
@@ -130,60 +140,81 @@ font-family: 'Inter', system-ui, -apple-system, sans-serif;
 
 ### Card
 - Background: `--surface`
-- Border: 1px `--highlight`
-- Border-radius: `--radius-xl`
-- Padding: `--space-6` to `--space-8`
-- Shadow: `--shadow-md`
-- Hover: border changes to `--accent-blue`
-
----
+- Border-radius: `--radius-lg` or `--radius-xl`
+- **NO borders**
+- Padding: `--space-4`
+- Hover: subtle tone shift to `--surface-soft`
 
 ### Button
 
-**Variants:**
+**Soft Tinted Style (recommended):**
+```css
+background: rgba(137, 180, 250, 0.15);  /* 15% opacity */
+color: var(--accent-blue);
+```
+- Hover: increase opacity to 25%
+- **NO gradients**
+- **NO shadows/glows**
+- **NO transforms on hover**
 
-| Variant | Background | Text | Shadow |
-|---------|-----------|------|--------|
-| Primary | Gradient `--accent-blue` | `--bg-primary` | Blue glow |
-| Secondary | `--surface-soft` | `--text-primary` | None |
-| Danger | Gradient `--accent-red` | `--bg-primary` | Red glow |
-| Ghost | transparent | `--text-secondary` | None |
+**Button Variants:**
+
+| Variant | Background | Text |
+|---------|-----------|------|
+| Primary | `accent/15%` | `--accent-blue` |
+| Secondary | `--surface-soft` | `--text-primary` |
+| Danger | `red/15%` | `--accent-red` |
 
 **States:**
-- Hover: `translateY(-1px)` + increased shadow
-- Active: `translateY(0)` + reduced shadow
-- Disabled: 50% opacity, no transform
+- Hover: background opacity increases slightly
+- Disabled: 50% opacity
 
 ---
 
 ### Input
 - Background: `--bg-secondary`
-- Border: 2px `--surface`
+- **NO borders**
 - Border-radius: `--radius-lg`
-- Focus: border `--accent-blue` + blue ring
+- Focus: change background to `--surface`
+- **NO outline, NO ring**
 
 ---
 
 ### Tag/Label
-- Border-radius: `--radius-full`
-- Background: accent at 15% opacity
-- Border: 1px accent at 30% opacity
-- Text: uppercase, font-weight 600
+- Border-radius: `--radius-full` (pill shape)
+- Background: accent at **15% opacity**
+- **NO borders**
+- Font-size: `--text-xs`
+
+---
+
+### Leaderboard Row
+- Background: `--surface` (or alternating)
+- Border-radius: `--radius-md`
+- Hover: `--surface-soft`
+- **NO borders**
+
+### Rank Badges
+- Size: 24x24px (small)
+- Border-radius: 50% (circle)
+- Background: accent at **25% opacity**
+- Top 3: yellow, mauve, green
+- Others: `--highlight`
 
 ---
 
 ### Auth Page
-- Container: gradient background `--bg-primary` to `--bg-secondary`
-- Card: `--shadow-lg`, centered, max-width 28rem
-- Title: font-weight 700, centered
+- Container: `--bg-primary` (solid)
+- Card: `--surface`, centered
+- **NO gradients**
 
 ---
 
 ### Game Card
 - Background: `--surface`
-- Border-radius: `--radius-xl`
-- Hover: `translateY(-4px)` + blue shadow
-- Contains: title, description, tag, action button
+- Border-radius: `--radius-lg`
+- Hover: `--surface-soft`
+- **NO borders, NO transforms, NO shadows**
 
 ---
 
@@ -193,19 +224,23 @@ font-family: 'Inter', system-ui, -apple-system, sans-serif;
 - ✅ Use CSS variables for all colors
 - ✅ Use spacing tokens for padding/margin
 - ✅ Use border-radius tokens
-- ✅ Add subtle shadows to cards
-- ✅ Use gradient for primary buttons
-- ✅ Add hover transforms to interactive elements
+- ✅ Use 3-tone system for layering
+- ✅ Use soft tinted backgrounds for buttons
+- ✅ Use accent colors at low opacity (15-25%)
+- ✅ Add subtle hover tone shifts
 - ✅ Keep surfaces neutral
-- ✅ Use accents sparingly
+- ✅ Use accents sparingly - one per component
 
 ### DO NOT:
-- ❌ Use raw hex colors
-- ❌ Use inline styles
-- ❌ Use large/bright animations
-- ❌ Add glow effects to all elements (only buttons)
+- ❌ Use raw hex colors (use CSS variables)
+- ❌ Use borders for separation
+- ❌ Use gradients on buttons
+- ❌ Use shadows/glows on buttons
+- ❌ Use transforms on hover
+- ❌ Use solid accent backgrounds
+- ❌ Use Tailwind's bright color classes (e.g., `bg-yellow-500`)
 - ❌ Create arbitrary spacing values
-- ❌ Override component styles locally
+- ❌ Use high contrast between layers
 
 ---
 
@@ -222,12 +257,14 @@ frontend/src/
 │   ├── RegisterPage.tsx
 │   ├── HomePage.tsx
 │   ├── PlayPage.tsx
+│   ├── Typeracer.tsx
 │   └── NotFoundPage.tsx
 ├── hooks/
 │   ├── useAuth.tsx
+│   ├── useWebSocket.ts
 │   └── ProtectedRoute.tsx
 ├── services/
-│   └── index.ts
+│   └── api.ts
 ├── types/
 │   └── index.ts
 ├── index.css                 # Base styles + components
@@ -239,19 +276,32 @@ frontend/src/
 ## Implementation Notes
 
 ### Tailwind Extended Theme
-Custom colors, spacing, and border-radius are mapped in `tailwind.config.js` to CSS variables.
+Custom colors and border-radius are mapped in `tailwind.config.js`.
 
-### CSS Classes Available
-- `.card` - Surface card with shadow
-- `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-danger` / `.btn-ghost`
-- `.input` / `.input-error`
+### Available CSS Classes
+- `.card` - Surface card
+- `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-danger`
+- `.input` - Clean input
 - `.tag` / `.tag-blue` / `.tag-green` / `.tag-red`
-- `.spinner` / `.spinner-lg`
-- `.alert-error` - Error message box
+- `.spinner` - Loading spinner
 - `.auth-container` / `.auth-card` - Auth page layout
 - `.navbar` / `.navbar-brand` - Navigation
 - `.game-card` - Game listing card
 - `.page-header` / `.page-title` / `.page-subtitle` - Section headers
+
+---
+
+## Visual Balance Check
+
+Before shipping, verify:
+
+1. **Layering:** Does the UI feel like one surface? Are tone differences subtle?
+2. **Accents:** Are accents guiding attention, not overwhelming?
+3. **Borders:** Are there any visible borders? Remove them.
+4. **Contrast:** Is contrast between layers low and soft?
+5. **Balance:** Is the UI 90% neutral?
+
+If any check fails, revise before merging.
 
 ---
 
@@ -262,4 +312,5 @@ This style guide is **enforceable**. Any code violating these rules should be fl
 When in doubt, prefer:
 - Neutral over colorful
 - Subtle over dramatic
-- Consistent over creative
+- Tone over border
+- Cohesion over creativity
