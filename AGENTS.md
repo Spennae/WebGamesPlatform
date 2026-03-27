@@ -36,7 +36,8 @@ WebGamesPlatform/
 │   └── package.json
 ├── engines/             # Game services (future)
 ├── db/                  # Database scripts
-└── docker/              # Docker configurations
+├── docker/              # Docker configurations
+└── scripts/             # Utility scripts (start.sh, stop.sh)
 ```
 
 ## Conventions
@@ -146,6 +147,15 @@ npm run build
 ```bash
 # Connect to MySQL
 docker compose exec mysql mysql -u root -p
+```
+
+### Scripts
+```bash
+# Start everything (Docker + Frontend + opens browser)
+./scripts/start.sh
+
+# Stop everything
+./scripts/stop.sh
 ```
 
 ### Git
