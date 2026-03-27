@@ -4,6 +4,13 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
 type GamePhase = 'waiting' | 'playing' | 'finished';
+type EngineStatus = 'checking' | 'healthy' | 'unhealthy' | 'unknown';
+
+interface LeaderboardEntry {
+  id: number;
+  username: string;
+  value: number;
+}
 
 export function Typeracer() {
   const { user } = useAuth();
@@ -16,10 +23,14 @@ export function Typeracer() {
   const [finalWpm, setFinalWpm] = useState(0);
   const [finalAccuracy, setFinalAccuracy] = useState(0);
   const [userInput, setUserInput] = useState('');
+  const [gameKey, setGameKey] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [liveWpm, setLiveWpm] = useState(0);
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>('checking');
 
   const wsUrl = `ws://localhost:5000/api/engine/typeracer`;
   const wsEnabled = phase !== 'finished';
-  const { status, lastMessage, sendMessage } = useWebSocket(wsUrl, wsEnabled);
+  const { status, lastMessage, sendMessage } = useWebSocket(`${wsUrl}?key=${gameKey}`, wsEnabled);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number>(0);
   const textRef = useRef('');
@@ -31,6 +42,26 @@ export function Typeracer() {
   useEffect(() => { errorsRef.current = errors; }, [errors]);
 
   useEffect(() => {
+    const checkEngineHealth = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/health/engines');
+        if (response.ok) {
+          const data = await response.json();
+          setEngineStatus(data.status === 'healthy' ? 'healthy' : 'unhealthy');
+        } else {
+          setEngineStatus('unhealthy');
+        }
+      } catch {
+        setEngineStatus('unknown');
+      }
+    };
+
+    checkEngineHealth();
+    const interval = setInterval(checkEngineHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     if (phase === 'waiting' && lastMessage?.type === 'gameStart' && lastMessage.text) {
       setText(lastMessage.text);
       setPhase('playing');
@@ -39,6 +70,7 @@ export function Typeracer() {
       setUserInput('');
       setStartTime(Date.now());
       setTimeLeft(60);
+      setLiveWpm(0);
       inputRef.current?.focus();
     }
 
@@ -50,6 +82,7 @@ export function Typeracer() {
       setPhase('finished');
       if (timerRef.current) clearInterval(timerRef.current);
       submitScore(wpm, accuracy);
+      fetchLeaderboard();
     }
   }, [lastMessage, phase]);
 
@@ -57,11 +90,14 @@ export function Typeracer() {
     if (phase !== 'playing' || !startTime) return;
 
     timerRef.current = window.setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const elapsed = (Date.now() - startTime) / 1000;
       const remaining = Math.max(0, 60 - elapsed);
-      setTimeLeft(remaining);
+      setTimeLeft(Math.floor(remaining));
 
-      if (remaining === 0) {
+      const wpm = elapsed > 0 ? Math.round((currentIndexRef.current / 5) / (elapsed / 60)) : 0;
+      setLiveWpm(wpm);
+
+      if (remaining <= 0) {
         finishGame();
       }
     }, 100);
@@ -86,6 +122,27 @@ export function Typeracer() {
     } catch (e) {
       console.error('Failed to submit score:', e);
     }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
+      setLeaderboard(response.data);
+    } catch (e) {
+      console.error('Failed to fetch leaderboard:', e);
+    }
+  };
+
+  const startNewRace = () => {
+    setGameKey(k => k + 1);
+    setPhase('waiting');
+    setText('');
+    setCurrentIndex(0);
+    setErrors(0);
+    setUserInput('');
+    setFinalWpm(0);
+    setFinalAccuracy(0);
+    setTimeLeft(60);
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,18 +180,17 @@ export function Typeracer() {
 
   const renderText = () => {
     return text.split('').map((char, index) => {
-      let className = 'text-text-secondary';
+      let style: React.CSSProperties = { color: '#6c7086' };
 
       if (index < currentIndex) {
-        className = userInput[index] === char 
-          ? 'text-accent-green' 
-          : 'text-accent-red bg-accent-red/20';
+        const isCorrect = userInput[index] === char;
+        style = isCorrect ? { color: '#a6e3a1' } : { color: '#f38ba8' };
       } else if (index === currentIndex) {
-        className = 'text-text-primary bg-accent-blue/30';
+        style = { color: '#cdd6f4', backgroundColor: 'rgba(137, 180, 250, 0.2)' };
       }
 
       return (
-        <span key={index} className={className}>
+        <span key={index} style={style}>
           {char}
         </span>
       );
@@ -143,41 +199,145 @@ export function Typeracer() {
 
   if (phase === 'finished') {
     return (
-      <div className="card text-center">
-        <h2 className="text-2xl font-bold text-text-primary mb-6">Race Complete!</h2>
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
+        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ fontSize: '20px', fontWeight: 600 }}>Race Complete</div>
+            <div style={{ fontSize: '14px', color: '#a6adc8', marginTop: '8px' }}>Your performance</div>
+          </div>
 
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div className="p-4 bg-crust rounded-lg">
-            <p className="text-sm text-text-secondary mb-1">Speed</p>
-            <p className="text-4xl font-bold text-accent-green">{finalWpm}</p>
-            <p className="text-sm text-text-secondary">WPM</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ background: '#313244', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#a6adc8' }}>Speed</div>
+              <div style={{ fontSize: '28px', fontWeight: 600, color: '#a6e3a1' }}>{finalWpm}</div>
+              <div style={{ fontSize: '14px', color: '#a6adc8' }}>WPM</div>
+            </div>
+            <div style={{ background: '#313244', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#a6adc8' }}>Accuracy</div>
+              <div style={{ fontSize: '28px', fontWeight: 600, color: '#89b4fa' }}>{finalAccuracy}%</div>
+              <div style={{ fontSize: '14px', color: '#a6adc8' }}>correct</div>
+            </div>
           </div>
-          <div className="p-4 bg-crust rounded-lg">
-            <p className="text-sm text-text-secondary mb-1">Accuracy</p>
-            <p className="text-4xl font-bold text-accent-blue">{finalAccuracy}%</p>
-            <p className="text-sm text-text-secondary">correct</p>
-          </div>
+
+          <button
+            onClick={startNewRace}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'rgba(137,180,250,0.15)',
+              color: '#89b4fa',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Race Again
+          </button>
         </div>
 
-        <p className="text-text-secondary">Refresh page to race again</p>
+        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
+
+          {leaderboard.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {leaderboard.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: index % 2 === 0 ? '#2b2c3f' : '#313244'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: index === 0 ? 'rgba(249,226,175,0.25)' : 
+                                  index === 1 ? 'rgba(203,166,247,0.25)' :
+                                  index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
+                      color: index === 0 ? '#f9e2af' :
+                             index === 1 ? '#cba6f7' :
+                             index === 2 ? '#a6e3a1' : '#a6adc8'
+                    }}>
+                      {index + 1}
+                    </div>
+                    <span>{entry.username}</span>
+                  </div>
+                  <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (engineStatus === 'unhealthy' || engineStatus === 'unknown') {
+    return (
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
+        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>Engine Unavailable</div>
+          <div style={{ color: '#a6adc8', marginBottom: '16px' }}>
+            The TypeRacer engine is currently unavailable. Please try again in a few moments.
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'rgba(137,180,250,0.15)',
+              color: '#89b4fa',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   if (status === 'connecting' || status === 'disconnected') {
     return (
-      <div className="text-center py-12">
-        <div className="spinner mb-4"></div>
-        <p className="text-text-secondary">Connecting to game server...</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+        <div style={{ width: '24px', height: '24px', border: '2px solid #45475a', borderTopColor: '#89b4fa', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '16px' }}></div>
+        <div style={{ fontSize: '14px', color: '#a6adc8' }}>Connecting to game server...</div>
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="text-center py-12">
-        <p className="text-accent-red mb-4">Failed to connect to game server</p>
-        <button onClick={() => window.location.reload()} className="btn btn-primary">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+        <div style={{ color: '#f38ba8', marginBottom: '16px', fontSize: '14px' }}>Failed to connect to game server</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'rgba(137,180,250,0.15)',
+            color: '#89b4fa',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
+        >
           Retry
         </button>
       </div>
@@ -185,24 +345,27 @@ export function Typeracer() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <span className="tag tag-blue">{user?.username}</span>
-          <span className="tag tag-purple">WPM: {currentIndex > 0 ? Math.round((currentIndex / 5) / ((Date.now() - (startTime || Date.now())) / 60000 || 0.01)) : 0}</span>
-        </div>
-        <div className={`text-2xl font-mono font-bold ${timeLeft <= 10 ? 'text-accent-red' : 'text-text-primary'}`}>
-          {timeLeft}s
+    <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: 'rgba(137,180,250,0.15)', color: '#89b4fa', fontSize: '12px' }}>
+          {user?.username}
+        </span>
+        <div style={{ fontSize: '12px', color: '#a6adc8' }}>
+          Errors: <span style={{ fontWeight: 600, color: '#f38ba8' }}>{errors}</span>
+          <span style={{ marginLeft: '16px', fontFamily: 'monospace', fontWeight: 600 }}>{liveWpm} WPM</span>
+          <span style={{ marginLeft: '16px', fontFamily: 'monospace', fontWeight: 600, color: timeLeft <= 10 ? '#f38ba8' : '#cdd6f4' }}>
+            {timeLeft}s
+          </span>
         </div>
       </div>
 
-      <div className="card">
-        <div 
-          className="font-mono text-xl leading-relaxed p-6 bg-crust rounded-lg cursor-text"
+      <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+        <div
+          style={{ fontFamily: 'monospace', fontSize: '16px', lineHeight: '28px', padding: '16px', background: '#313244', borderRadius: '12px', cursor: 'text' }}
           onClick={() => inputRef.current?.focus()}
         >
           {text ? renderText() : (
-            <span className="text-text-secondary animate-pulse">Waiting for text...</span>
+            <span style={{ color: '#a6adc8' }}>Waiting for text...</span>
           )}
         </div>
 
@@ -212,7 +375,17 @@ export function Typeracer() {
           value={userInput}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          className="input mt-4"
+          style={{
+            width: '100%',
+            marginTop: '16px',
+            padding: '12px 16px',
+            background: '#181825',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#cdd6f4',
+            fontSize: '16px',
+            outline: 'none'
+          }}
           placeholder={phase === 'playing' ? 'Start typing...' : 'Game starting...'}
           disabled={phase !== 'playing'}
           autoComplete="off"
@@ -222,9 +395,8 @@ export function Typeracer() {
         />
       </div>
 
-      <div className="flex justify-between text-sm text-text-secondary">
-        <span>Progress: {currentIndex}/{text.length}</span>
-        <span>Errors: {errors}</span>
+      <div style={{ textAlign: 'center', fontSize: '12px', color: '#a6adc8' }}>
+        {currentIndex} / {text.length}
       </div>
     </div>
   );
