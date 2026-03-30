@@ -7,6 +7,8 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { PlayPage } from './pages/PlayPage';
 import { LeaderboardsPage } from './pages/LeaderboardsPage';
+import { FeedbackPage } from './pages/FeedbackPage';
+import { AdminFeedbackPage } from './pages/AdminFeedbackPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import './index.css';
 
@@ -26,6 +28,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PlayPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <ProtectedRoute>
+                  <FeedbackPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/feedback"
+              element={
+                <ProtectedRoute>
+                  <AdminFeedbackPage />
                 </ProtectedRoute>
               }
             />
