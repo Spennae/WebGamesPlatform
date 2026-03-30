@@ -14,6 +14,14 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {isAuthenticated && !isGuest ? (
             <>
+              {user?.isAdmin && (
+                <Link to="/admin/feedback" className="btn btn-secondary">
+                  Admin
+                </Link>
+              )}
+              <Link to="/feedback" className="btn btn-secondary">
+                Feedback
+              </Link>
               <span className="text-sm text-text-secondary hidden sm:block">
                 {user?.username}
               </span>

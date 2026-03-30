@@ -3,6 +3,7 @@ export interface User {
   username: string;
   email: string;
   createdAt: string;
+  isAdmin: boolean;
 }
 
 export interface Game {
@@ -26,6 +27,7 @@ export interface AuthResponse {
   userId: number;
   username: string;
   email: string;
+  isAdmin: boolean;
   expiresAt: string;
 }
 
@@ -43,4 +45,41 @@ export interface LoginRequest {
 export interface ScoreRequest {
   gameSlug: string;
   value: number;
+}
+
+export const FeedbackType = {
+  Bug: 0,
+  Feedback: 1,
+} as const;
+
+export type FeedbackType = typeof FeedbackType[keyof typeof FeedbackType];
+
+export const FeedbackStatus = {
+  Open: 0,
+  InProgress: 1,
+  Resolved: 2,
+  Closed: 3,
+} as const;
+
+export type FeedbackStatus = typeof FeedbackStatus[keyof typeof FeedbackStatus];
+
+export interface Feedback {
+  id: number;
+  userId: number;
+  username: string;
+  type: FeedbackType;
+  status: FeedbackStatus;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface SubmitFeedbackRequest {
+  type: FeedbackType;
+  title: string;
+  description: string;
+}
+
+export interface UpdateFeedbackStatusRequest {
+  status: FeedbackStatus;
 }
