@@ -30,6 +30,19 @@ export function Typeracer() {
   const [liveWpm, setLiveWpm] = useState(0);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('checking');
 
+  const wsUrl = `ws://localhost:5000/api/engine/typeracer`;
+  const wsEnabled = phase !== 'finished';
+  const { status, lastMessage, sendMessage } = useWebSocket(`${wsUrl}?key=${gameKey}`, wsEnabled);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<number>(0);
+  const textRef = useRef('');
+  const currentIndexRef = useRef(0);
+  const errorsRef = useRef(0);
+
+  useEffect(() => { textRef.current = text; }, [text]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
+  useEffect(() => { errorsRef.current = errors; }, [errors]);
+
   useEffect(() => {
     const savedScore = sessionStorage.getItem('pendingScore');
     if (savedScore && !isGuest) {
@@ -45,47 +58,6 @@ export function Typeracer() {
       })();
     }
   }, [isGuest]);
-
-  const wsUrl = `ws://localhost:5000/api/engine/typeracer`;
-  const wsEnabled = phase !== 'finished';
-  const { status, lastMessage, sendMessage } = useWebSocket(`${wsUrl}?key=${gameKey}`, wsEnabled);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<number>(0);
-  const textRef = useRef('');
-  const currentIndexRef = useRef(0);
-  const errorsRef = useRef(0);
-
-  useEffect(() => { textRef.current = text; }, [text]);
-  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
-  useEffect(() => { errorsRef.current = errors; }, [errors]);
-
-  const finishGame = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
-  };
-
-  const submitScore = async (wpm: number, accuracy: number) => {
-    if (isGuest) return;
-    
-    try {
-      await api.post('/api/scores', {
-        gameSlug: 'typeracer',
-        value: Math.round(wpm * 100),
-        metadata: { wpm, accuracy }
-      });
-    } catch (e) {
-      console.error('Failed to submit score:', e);
-    }
-  };
-
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
-      setLeaderboard(response.data);
-    } catch (e) {
-      console.error('Failed to fetch leaderboard:', e);
-    }
-  };
 
   useEffect(() => {
     const checkEngineHealth = async () => {
@@ -157,6 +129,34 @@ export function Typeracer() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [phase, startTime]);
+
+  const finishGame = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
+  };
+
+  const submitScore = async (wpm: number, accuracy: number) => {
+    if (isGuest) return;
+    
+    try {
+      await api.post('/api/scores', {
+        gameSlug: 'typeracer',
+        value: Math.round(wpm * 100),
+        metadata: { wpm, accuracy }
+      });
+    } catch (e) {
+      console.error('Failed to submit score:', e);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
+      setLeaderboard(response.data);
+    } catch (e) {
+      console.error('Failed to fetch leaderboard:', e);
+    }
+  };
 
   const handleLoginToSave = () => {
     navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);

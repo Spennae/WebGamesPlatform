@@ -245,6 +245,7 @@ export function PlayPage() {
 - **Score submission** to API leaderboard
 - **Leaderboard display** after race completion
 - **"Race Again" button** with WebSocket reconnection
+<<<<<<< HEAD
 - **Guest play** supported - can play without logging in
 - **Score saving** for guests: score saved to sessionStorage, submitted after login/register
 
