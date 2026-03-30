@@ -28,11 +28,23 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=root;Password=${MYSQL_ROOT_PASSWORD};"
+      EngineUrl__Typeracer: "http://typeracer:8081"
     ports:
       - "5000:8080"
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - webgames_network
+
+  typeracer:
+    build:
+      context: ./engines/typeracer
+      dockerfile: Dockerfile
+    container_name: webgames_typeracer
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
     networks:
       - webgames_network
 

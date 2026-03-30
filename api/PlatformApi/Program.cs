@@ -58,12 +58,45 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseWebSockets();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/health/engines", async (IConfiguration configuration) =>
+{
+    var engineUrl = configuration["EngineUrl:Typeracer"] ?? "http://typeracer:8081";
+    var wsUrl = engineUrl.Replace("http://", "").Replace("https://", "");
+    var healthUrl = $"http://{wsUrl}/health";
+    
+    try
+    {
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(5);
+        var response = await client.GetAsync(healthUrl);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            return Results.Ok(new { 
+                status = "healthy",
+                engines = new { typeracer = "healthy" }
+            });
+        }
+        
+        return Results.Json(new { 
+            status = "degraded",
+            engines = new { typeracer = "unhealthy" }
+        }, statusCode: 503);
+    }
+    catch
+    {
+        return Results.Json(new { 
+            status = "degraded",
+            engines = new { typeracer = "unreachable" }
+        }, statusCode: 503);
+    }
+});
 
 app.Run();
