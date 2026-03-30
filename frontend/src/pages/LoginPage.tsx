@@ -54,7 +54,7 @@ export function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
+        <form onSubmit={handleSubmit} className="form-actions">
           <div className="form-group">
             <label className="form-label" htmlFor="email">
               Email

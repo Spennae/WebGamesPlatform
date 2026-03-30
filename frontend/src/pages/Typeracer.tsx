@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
+import { StatCard, StatsGrid, Leaderboard } from '../components';
 
 type GamePhase = 'waiting' | 'playing' | 'finished';
 type EngineStatus = 'checking' | 'healthy' | 'unhealthy' | 'unknown';
@@ -42,6 +43,34 @@ export function Typeracer() {
   useEffect(() => { textRef.current = text; }, [text]);
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
   useEffect(() => { errorsRef.current = errors; }, [errors]);
+
+  const finishGame = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
+  };
+
+  const submitScore = async (wpm: number, accuracy: number) => {
+    if (isGuest) return;
+    
+    try {
+      await api.post('/api/scores', {
+        gameSlug: 'typeracer',
+        value: Math.round(wpm * 100),
+        metadata: { wpm, accuracy }
+      });
+    } catch (e) {
+      console.error('Failed to submit score:', e);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
+      setLeaderboard(response.data);
+    } catch (e) {
+      console.error('Failed to fetch leaderboard:', e);
+    }
+  };
 
   useEffect(() => {
     const savedScore = sessionStorage.getItem('pendingScore');
@@ -130,34 +159,6 @@ export function Typeracer() {
     };
   }, [phase, startTime]);
 
-  const finishGame = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
-  };
-
-  const submitScore = async (wpm: number, accuracy: number) => {
-    if (isGuest) return;
-    
-    try {
-      await api.post('/api/scores', {
-        gameSlug: 'typeracer',
-        value: Math.round(wpm * 100),
-        metadata: { wpm, accuracy }
-      });
-    } catch (e) {
-      console.error('Failed to submit score:', e);
-    }
-  };
-
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
-      setLeaderboard(response.data);
-    } catch (e) {
-      console.error('Failed to fetch leaderboard:', e);
-    }
-  };
-
   const handleLoginToSave = () => {
     navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);
   };
@@ -209,13 +210,13 @@ export function Typeracer() {
 
   const renderText = () => {
     return text.split('').map((char, index) => {
-      let style: React.CSSProperties = { color: '#6c7086' };
+      let style: React.CSSProperties = { color: 'var(--text-muted)' };
 
       if (index < currentIndex) {
         const isCorrect = userInput[index] === char;
-        style = isCorrect ? { color: '#a6e3a1' } : { color: '#f38ba8' };
+        style = isCorrect ? { color: 'var(--accent-green)' } : { color: 'var(--accent-red)' };
       } else if (index === currentIndex) {
-        style = { color: '#cdd6f4', backgroundColor: 'rgba(137, 180, 250, 0.2)' };
+        style = { color: 'var(--text-primary)', backgroundColor: 'rgba(137, 180, 250, 0.2)' };
       }
 
       return (
@@ -226,120 +227,51 @@ export function Typeracer() {
     });
   };
 
+  const leaderboardEntries = leaderboard.map((entry, index) => ({
+    rank: index + 1,
+    username: entry.username,
+    value: entry.value,
+  }));
+
   if (phase === 'finished') {
     return (
-      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
-        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '20px', fontWeight: 600 }}>Race Complete</div>
-            <div style={{ fontSize: '14px', color: '#a6adc8', marginTop: '8px' }}>Your performance</div>
+      <div className="rules-card">
+        <div className="results-card">
+          <div className="results-title">
+            Race Complete
+            <div className="results-subtitle">Your performance</div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ background: '#313244', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', color: '#a6adc8' }}>Speed</div>
-              <div style={{ fontSize: '28px', fontWeight: 600, color: '#a6e3a1' }}>{finalWpm}</div>
-              <div style={{ fontSize: '14px', color: '#a6adc8' }}>WPM</div>
-            </div>
-            <div style={{ background: '#313244', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', color: '#a6adc8' }}>Accuracy</div>
-              <div style={{ fontSize: '28px', fontWeight: 600, color: '#89b4fa' }}>{finalAccuracy}%</div>
-              <div style={{ fontSize: '14px', color: '#a6adc8' }}>correct</div>
-            </div>
-          </div>
+          <StatsGrid>
+            <StatCard value={finalWpm} label="Speed" unit="WPM" color="var(--accent-green)" />
+            <StatCard value={`${finalAccuracy}%`} label="Accuracy" unit="correct" color="var(--accent-blue)" />
+          </StatsGrid>
 
           {isGuest && (
-            <div style={{ 
-              background: 'rgba(249,226,175,0.1)', 
-              borderRadius: '8px', 
-              padding: '12px', 
-              marginBottom: '16px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '14px', color: '#f9e2af', marginBottom: '8px' }}>
+            <div className="guest-prompt">
+              <div className="guest-prompt-text">
                 Login to save your score to the leaderboard
               </div>
               <button
                 onClick={handleLoginToSave}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#a6e3a1',
-                  color: '#1e1e2e',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="btn-primary-solid"
+                style={{ background: 'var(--accent-green)', color: 'var(--bg-primary)' }}
               >
                 Login to Save Your Score
               </button>
             </div>
           )}
 
-          <button
-            onClick={startNewRace}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'rgba(137,180,250,0.15)',
-              color: '#89b4fa',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            Race Again
-          </button>
+          <div className="results-actions results-actions-with-margin">
+            <button onClick={startNewRace} className="btn btn-primary">
+              Race Again
+            </button>
+          </div>
         </div>
 
-        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
-          <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
-
-          {leaderboard.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {leaderboard.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: index % 2 === 0 ? '#2b2c3f' : '#313244'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      background: index === 0 ? 'rgba(249,226,175,0.25)' : 
-                                  index === 1 ? 'rgba(203,166,247,0.25)' :
-                                  index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
-                      color: index === 0 ? '#f9e2af' :
-                             index === 1 ? '#cba6f7' :
-                             index === 2 ? '#a6e3a1' : '#a6adc8'
-                    }}>
-                      {index + 1}
-                    </div>
-                    <span>{entry.username}</span>
-                  </div>
-                  <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
-          )}
+        <div className="results-card">
+          <div className="results-title results-title-left">Leaderboard</div>
+          <Leaderboard entries={leaderboardEntries} />
         </div>
       </div>
     );
@@ -347,24 +279,13 @@ export function Typeracer() {
 
   if (engineStatus === 'unhealthy' || engineStatus === 'unknown') {
     return (
-      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
-        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '16px' }}>Engine Unavailable</div>
-          <div style={{ color: '#a6adc8', marginBottom: '16px' }}>
+      <div className="rules-card">
+        <div className="results-card results-card-centered">
+          <div className="results-title">Engine Unavailable</div>
+          <div className="text-text-secondary text-with-margin-top">
             The TypeRacer engine is currently unavailable. Please try again in a few moments.
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'rgba(137,180,250,0.15)',
-              color: '#89b4fa',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={() => window.location.reload()} className="btn btn-primary">
             Retry
           </button>
         </div>
@@ -374,57 +295,56 @@ export function Typeracer() {
 
   if (status === 'connecting' || status === 'disconnected') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
-        <div style={{ width: '24px', height: '24px', border: '2px solid #45475a', borderTopColor: '#89b4fa', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '16px' }}></div>
-        <div style={{ fontSize: '14px', color: '#a6adc8' }}>Connecting to game server...</div>
+      <div className="rules-card">
+        <div className="centered-container">
+          <div className="loading-spinner"></div>
+          <div className="text-text-secondary text-sm">Connecting to game server...</div>
+        </div>
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
-        <div style={{ color: '#f38ba8', marginBottom: '16px', fontSize: '14px' }}>Failed to connect to game server</div>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: 'none',
-            background: 'rgba(137,180,250,0.15)',
-            color: '#89b4fa',
-            fontSize: '14px',
-            cursor: 'pointer'
-          }}
-        >
-          Retry
-        </button>
+      <div className="rules-card">
+        <div className="centered-container">
+          <div className="error-message">Failed to connect to game server</div>
+          <button onClick={() => window.location.reload()} className="btn btn-primary">
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: isGuest ? 'rgba(249,226,175,0.15)' : 'rgba(137,180,250,0.15)', color: isGuest ? '#f9e2af' : '#89b4fa', fontSize: '12px' }}>
+    <div className="rules-card">
+      <div className="game-header">
+        <span style={{ 
+          padding: '6px 12px', 
+          borderRadius: '9999px', 
+          background: isGuest ? 'rgba(249,226,175,0.15)' : 'rgba(137,180,250,0.15)', 
+          color: isGuest ? 'var(--accent-yellow)' : 'var(--accent-blue)', 
+          fontSize: '12px' 
+        }}>
           {isGuest ? 'Guest' : user?.username}
         </span>
-        <div style={{ fontSize: '12px', color: '#a6adc8' }}>
-          Errors: <span style={{ fontWeight: 600, color: '#f38ba8' }}>{errors}</span>
-          <span style={{ marginLeft: '16px', fontFamily: 'monospace', fontWeight: 600 }}>{liveWpm} WPM</span>
-          <span style={{ marginLeft: '16px', fontFamily: 'monospace', fontWeight: 600, color: timeLeft <= 10 ? '#f38ba8' : '#cdd6f4' }}>
+        <div className="game-stats">
+          <span>Errors: <span style={{ fontWeight: 600, color: 'var(--accent-red)' }}>{errors}</span></span>
+          <span>{liveWpm} WPM</span>
+          <span style={{ color: timeLeft <= 10 ? 'var(--accent-red)' : 'var(--text-primary)' }}>
             {timeLeft}s
           </span>
         </div>
       </div>
 
-      <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+      <div className="game-text-container">
         <div
-          style={{ fontFamily: 'monospace', fontSize: '16px', lineHeight: '28px', padding: '16px', background: '#313244', borderRadius: '12px', cursor: 'text' }}
+          className="game-text"
           onClick={() => inputRef.current?.focus()}
         >
           {text ? renderText() : (
-            <span style={{ color: '#a6adc8' }}>Waiting for text...</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Waiting for text...</span>
           )}
         </div>
 
@@ -434,17 +354,7 @@ export function Typeracer() {
           value={userInput}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          style={{
-            width: '100%',
-            marginTop: '16px',
-            padding: '12px 16px',
-            background: '#181825',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#cdd6f4',
-            fontSize: '16px',
-            outline: 'none'
-          }}
+          className="input text-with-margin-top"
           placeholder={phase === 'playing' ? 'Start typing...' : 'Game starting...'}
           disabled={phase !== 'playing'}
           autoComplete="off"
@@ -454,7 +364,7 @@ export function Typeracer() {
         />
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '12px', color: '#a6adc8' }}>
+      <div className="game-footer">
         {currentIndex} / {text.length}
       </div>
     </div>
