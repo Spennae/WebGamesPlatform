@@ -78,7 +78,8 @@ function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
 
 export function PlayPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [phase, setPhase] = useState<GamePhase>('rules');
+  const hasPendingScore = typeof window !== 'undefined' && sessionStorage.getItem('pendingScore') !== null;
+  const [phase, setPhase] = useState<GamePhase>(hasPendingScore ? 'playing' : 'rules');
 
   if (slug === 'typeracer') {
     return (

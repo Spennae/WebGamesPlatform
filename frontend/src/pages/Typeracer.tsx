@@ -30,6 +30,22 @@ export function Typeracer() {
   const [liveWpm, setLiveWpm] = useState(0);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('checking');
 
+  useEffect(() => {
+    const savedScore = sessionStorage.getItem('pendingScore');
+    if (savedScore && !isGuest) {
+      const { wpm, accuracy } = JSON.parse(savedScore);
+      setFinalWpm(wpm);
+      setFinalAccuracy(accuracy);
+      setPhase('finished');
+      sessionStorage.removeItem('pendingScore');
+      
+      (async () => {
+        await submitScore(wpm, accuracy);
+        fetchLeaderboard();
+      })();
+    }
+  }, [isGuest]);
+
   const wsUrl = `ws://localhost:5000/api/engine/typeracer`;
   const wsEnabled = phase !== 'finished';
   const { status, lastMessage, sendMessage } = useWebSocket(`${wsUrl}?key=${gameKey}`, wsEnabled);
@@ -63,8 +79,6 @@ export function Typeracer() {
   };
 
   const fetchLeaderboard = async () => {
-    if (isGuest) return;
-    
     try {
       const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
       setLeaderboard(response.data);
@@ -113,6 +127,11 @@ export function Typeracer() {
       setFinalAccuracy(accuracy);
       setPhase('finished');
       if (timerRef.current) clearInterval(timerRef.current);
+      
+      if (isGuest) {
+        sessionStorage.setItem('pendingScore', JSON.stringify({ wpm, accuracy }));
+      }
+      
       submitScore(wpm, accuracy);
       fetchLeaderboard();
     }
@@ -238,7 +257,7 @@ export function Typeracer() {
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '14px', color: '#f9e2af', marginBottom: '8px' }}>
-                Guest scores are not saved
+                Login to save your score to the leaderboard
               </div>
               <button
                 onClick={handleLoginToSave}
@@ -276,54 +295,52 @@ export function Typeracer() {
           </button>
         </div>
 
-        {!isGuest && (
-          <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
-            <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
+        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
 
-            {leaderboard.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {leaderboard.map((entry, index) => (
-                  <div
-                    key={entry.id}
-                    style={{
+          {leaderboard.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {leaderboard.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: index % 2 === 0 ? '#2b2c3f' : '#313244'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      background: index % 2 === 0 ? '#2b2c3f' : '#313244'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        background: index === 0 ? 'rgba(249,226,175,0.25)' : 
-                                    index === 1 ? 'rgba(203,166,247,0.25)' :
-                                    index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
-                        color: index === 0 ? '#f9e2af' :
-                               index === 1 ? '#cba6f7' :
-                               index === 2 ? '#a6e3a1' : '#a6adc8'
-                      }}>
-                        {index + 1}
-                      </div>
-                      <span>{entry.username}</span>
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: index === 0 ? 'rgba(249,226,175,0.25)' : 
+                                  index === 1 ? 'rgba(203,166,247,0.25)' :
+                                  index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
+                      color: index === 0 ? '#f9e2af' :
+                             index === 1 ? '#cba6f7' :
+                             index === 2 ? '#a6e3a1' : '#a6adc8'
+                    }}>
+                      {index + 1}
                     </div>
-                    <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
+                    <span>{entry.username}</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
-            )}
-          </div>
-        )}
+                  <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
+          )}
+        </div>
       </div>
     );
   }

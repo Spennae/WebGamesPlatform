@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isGuest, logout } = useAuth();
 
   return (
     <nav className="navbar">
@@ -12,7 +12,7 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3">
-          {isAuthenticated ? (
+          {isAuthenticated && !isGuest ? (
             <>
               <span className="text-sm text-text-secondary hidden sm:block">
                 {user?.username}
