@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services';
 import { useAuth } from '../hooks/useAuth';
 import type { User } from '../types';
@@ -10,7 +10,10 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { login, loginAsGuest } = useAuth();
+
+  const returnUrl = searchParams.get('returnUrl') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +29,18 @@ export function LoginPage() {
         createdAt: '',
       };
       login(response.token, user);
-      navigate('/');
+      navigate(returnUrl, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGuestPlay = () => {
+    loginAsGuest();
+    navigate(returnUrl, { replace: true });
   };
 
   return (
@@ -46,7 +54,7 @@ export function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
           <div className="form-group">
             <label className="form-label" htmlFor="email">
               Email
@@ -93,9 +101,17 @@ export function LoginPage() {
           </button>
         </form>
 
+        <button
+          type="button"
+          onClick={handleGuestPlay}
+          className="btn btn-secondary w-full mt-4"
+        >
+          Play as Guest
+        </button>
+
         <p className="text-center text-text-secondary mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="form-link">
+          <Link to={`/register?returnUrl=${encodeURIComponent(returnUrl)}`} className="form-link">
             Create one
           </Link>
         </p>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -13,7 +14,8 @@ interface LeaderboardEntry {
 }
 
 export function Typeracer() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<GamePhase>('waiting');
   const [text, setText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,6 +42,22 @@ export function Typeracer() {
   useEffect(() => { textRef.current = text; }, [text]);
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
   useEffect(() => { errorsRef.current = errors; }, [errors]);
+
+  useEffect(() => {
+    const savedScore = sessionStorage.getItem('pendingScore');
+    if (savedScore && !isGuest) {
+      const { wpm, accuracy } = JSON.parse(savedScore);
+      setFinalWpm(wpm);
+      setFinalAccuracy(accuracy);
+      setPhase('finished');
+      sessionStorage.removeItem('pendingScore');
+      
+      (async () => {
+        await submitScore(wpm, accuracy);
+        fetchLeaderboard();
+      })();
+    }
+  }, [isGuest]);
 
   useEffect(() => {
     const checkEngineHealth = async () => {
@@ -81,6 +99,11 @@ export function Typeracer() {
       setFinalAccuracy(accuracy);
       setPhase('finished');
       if (timerRef.current) clearInterval(timerRef.current);
+      
+      if (isGuest) {
+        sessionStorage.setItem('pendingScore', JSON.stringify({ wpm, accuracy }));
+      }
+      
       submitScore(wpm, accuracy);
       fetchLeaderboard();
     }
@@ -113,6 +136,8 @@ export function Typeracer() {
   };
 
   const submitScore = async (wpm: number, accuracy: number) => {
+    if (isGuest) return;
+    
     try {
       await api.post('/api/scores', {
         gameSlug: 'typeracer',
@@ -131,6 +156,10 @@ export function Typeracer() {
     } catch (e) {
       console.error('Failed to fetch leaderboard:', e);
     }
+  };
+
+  const handleLoginToSave = () => {
+    navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);
   };
 
   const startNewRace = () => {
@@ -218,6 +247,36 @@ export function Typeracer() {
               <div style={{ fontSize: '14px', color: '#a6adc8' }}>correct</div>
             </div>
           </div>
+
+          {isGuest && (
+            <div style={{ 
+              background: 'rgba(249,226,175,0.1)', 
+              borderRadius: '8px', 
+              padding: '12px', 
+              marginBottom: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '14px', color: '#f9e2af', marginBottom: '8px' }}>
+                Login to save your score to the leaderboard
+              </div>
+              <button
+                onClick={handleLoginToSave}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#a6e3a1',
+                  color: '#1e1e2e',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Login to Save Your Score
+              </button>
+            </div>
+          )}
 
           <button
             onClick={startNewRace}
@@ -347,8 +406,8 @@ export function Typeracer() {
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: 'rgba(137,180,250,0.15)', color: '#89b4fa', fontSize: '12px' }}>
-          {user?.username}
+        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: isGuest ? 'rgba(249,226,175,0.15)' : 'rgba(137,180,250,0.15)', color: isGuest ? '#f9e2af' : '#89b4fa', fontSize: '12px' }}>
+          {isGuest ? 'Guest' : user?.username}
         </span>
         <div style={{ fontSize: '12px', color: '#a6adc8' }}>
           Errors: <span style={{ fontWeight: 600, color: '#f38ba8' }}>{errors}</span>
