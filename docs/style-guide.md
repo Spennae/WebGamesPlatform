@@ -210,6 +210,45 @@ color: var(--accent-blue);
 
 ---
 
+### Rules Card
+- Used for game rules/instructions pages
+- Container: `.rules-card` - centered, max-width 500px
+- Inner: `.rules-card-inner` - surface background
+- Title: `.rules-title` - 24px semibold
+- Description: `.rules-description` - muted text
+- Steps: `.rules-steps`, `.rules-step` - vertical list with number badges
+- Number badge: `.number-badge` - 24x24px circle, accent at 20% opacity
+
+### Game Stats
+- Grid: `.stats-grid` - 2-column layout
+- Card: `.stat-card` - surface-soft background, centered text
+- Value: `.stat-value` - 28px semibold, accent color
+- Label: `.stat-label` - secondary text
+
+### Leaderboard
+- Container: `.leaderboard` - vertical list
+- Item: `.leaderboard-item` - row with rank, name, score
+- Rank: `.leaderboard-rank` - 24px width, muted
+- Top 3: `.leaderboard-rank.top-3` - accent-yellow color
+- Current user: `.leaderboard-item.current-user` - surface-soft background
+
+### Results Card
+- Used for game results/end screens
+- Card: `.results-card` - surface background
+- Title: `.results-title` - centered, 20px semibold
+- Subtitle: `.results-subtitle` - secondary text
+- Actions: `.results-actions` - vertical button stack
+
+### Guest Prompt
+- `.guest-prompt` - yellow tint background at 10% opacity
+- Text: `.guest-prompt-text` - yellow accent color
+
+### Game Header
+- `.game-header` - flex row, space-between
+- Stats: `.game-stats` - inline stats with monospace numbers
+
+---
+
 ### Game Card
 - Background: `--surface`
 - Border-radius: `--radius-lg`
@@ -251,7 +290,15 @@ frontend/src/
 ├── styles/
 │   └── design-tokens.css    # CSS variables
 ├── components/
-│   └── Navbar.tsx
+│   ├── Navbar.tsx
+│   ├── Highlight.tsx        # Text highlighting
+│   ├── Leaderboard.tsx      # Leaderboard display
+│   ├── NumberBadge.tsx      # Circular number badge
+│   ├── RuleStep.tsx         # Rules step item
+│   ├── RulesCard.tsx        # Rules page container
+│   ├── StatCard.tsx         # Stat display card
+│   ├── StatsGrid.tsx        # Stats grid container
+│   └── index.ts             # Barrel export
 ├── pages/
 │   ├── LoginPage.tsx
 │   ├── RegisterPage.tsx
@@ -275,19 +322,69 @@ frontend/src/
 
 ## Implementation Notes
 
+### React Components
+For reusable UI patterns, use the component library in `/components`:
+
+```tsx
+import { RulesCard, RuleStep, Highlight, StatCard, StatsGrid, Leaderboard } from '../components';
+```
+
+**Rules Components:**
+- `<RulesCard title="Game" description="Desc">{children}</RulesCard>` - Rules page container
+- `<RuleStep number={1}>Step text</RuleStep>` - Numbered step
+- `<Highlight color="var(--accent-green)">text</Highlight>` - Colored text
+
+**Stats Components:**
+- `<StatsGrid>{children}</StatsGrid>` - 2-column grid
+- `<StatCard value={100} label="WPM" unit="words" color="var(--accent-green)" />` - Stat display
+
+**Leaderboard:**
+- `<Leaderboard entries={[{rank, username, value}]} currentUserId={1} />` - Leaderboard list
+
 ### Tailwind Extended Theme
 Custom colors and border-radius are mapped in `tailwind.config.js`.
 
 ### Available CSS Classes
+
+**Base:**
 - `.card` - Surface card
-- `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-danger`
+- `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-danger` - Buttons
+- `.btn-primary-solid` - Solid accent button (primary CTAs)
 - `.input` - Clean input
-- `.tag` / `.tag-blue` / `.tag-green` / `.tag-red`
+- `.tag` / `.tag-blue` / `.tag-green` / `.tag-red` - Tags/labels
 - `.spinner` - Loading spinner
+
+**Layout:**
 - `.auth-container` / `.auth-card` - Auth page layout
 - `.navbar` / `.navbar-brand` - Navigation
 - `.game-card` - Game listing card
 - `.page-header` / `.page-title` / `.page-subtitle` - Section headers
+- `.form-actions` - Form action container
+- `.text-link` / `.text-link-with-margin` - Text links
+
+**Rules:**
+- `.rules-card` / `.rules-card-inner` - Rules page container
+- `.rules-title` / `.rules-description` / `.rules-section-title` - Text styles
+- `.rules-steps` / `.rules-step` / `.rules-step-text` - Step list
+- `.number-badge` - Circular number badge
+
+**Stats:**
+- `.stats-grid` - 2-column grid
+- `.stat-card` / `.stat-value` / `.stat-label` - Stat display
+
+**Leaderboard:**
+- `.leaderboard` / `.leaderboard-item` - Container and rows
+- `.leaderboard-rank` / `.leaderboard-name` / `.leaderboard-score` - Cell styles
+- `.leaderboard-rank.top-3` - Top 3 ranking
+- `.leaderboard-item.current-user` - Current user highlight
+
+**Game UI:**
+- `.game-header` / `.game-stats` - Game header
+- `.game-text-container` / `.game-text` / `.game-footer` - Game area
+- `.results-card` / `.results-title` / `.results-subtitle` - Results screen
+- `.results-actions` / `.results-actions-with-margin` - Action buttons
+- `.results-title-left` / `.results-card-centered` - Results variants
+- `.guest-prompt` / `.guest-prompt-text` - Guest prompt box
 
 ---
 
