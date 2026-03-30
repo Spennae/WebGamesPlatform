@@ -455,6 +455,10 @@
     color: var(--text-primary);
   }
 
+  .text-link-with-margin {
+    margin-top: var(--space-4);
+  }
+
   /* Game UI */
   .game-header {
     display: flex;
@@ -524,6 +528,37 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .results-actions-with-margin {
+    margin-top: var(--space-4);
+  }
+
+  .results-title-left {
+    text-align: left;
+    margin-bottom: var(--space-4);
+  }
+
+  .results-card-centered {
+    text-align: center;
+  }
+
+  .guest-prompt {
+    background: rgba(249,226,175,0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    text-align: center;
+  }
+
+  .guest-prompt-text {
+    font-size: var(--text-sm);
+    color: var(--accent-yellow);
+    margin-bottom: var(--space-2);
+  }
+
+  .text-with-margin-top {
+    margin-top: var(--space-4);
   }
 
   /* Centered container */

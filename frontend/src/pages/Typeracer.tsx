@@ -248,14 +248,8 @@ export function Typeracer() {
           </StatsGrid>
 
           {isGuest && (
-            <div style={{ 
-              background: 'rgba(249,226,175,0.1)', 
-              borderRadius: '8px', 
-              padding: '12px', 
-              marginTop: '16px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '14px', color: 'var(--accent-yellow)', marginBottom: '8px' }}>
+            <div className="guest-prompt">
+              <div className="guest-prompt-text">
                 Login to save your score to the leaderboard
               </div>
               <button
@@ -268,7 +262,7 @@ export function Typeracer() {
             </div>
           )}
 
-          <div className="results-actions" style={{ marginTop: '16px' }}>
+          <div className="results-actions results-actions-with-margin">
             <button onClick={startNewRace} className="btn btn-primary">
               Race Again
             </button>
@@ -276,7 +270,7 @@ export function Typeracer() {
         </div>
 
         <div className="results-card">
-          <div className="results-title" style={{ textAlign: 'left', marginBottom: '16px' }}>Leaderboard</div>
+          <div className="results-title results-title-left">Leaderboard</div>
           <Leaderboard entries={leaderboardEntries} />
         </div>
       </div>
@@ -286,9 +280,9 @@ export function Typeracer() {
   if (engineStatus === 'unhealthy' || engineStatus === 'unknown') {
     return (
       <div className="rules-card">
-        <div className="results-card" style={{ textAlign: 'center' }}>
+        <div className="results-card results-card-centered">
           <div className="results-title">Engine Unavailable</div>
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          <div className="text-text-secondary text-with-margin-top">
             The TypeRacer engine is currently unavailable. Please try again in a few moments.
           </div>
           <button onClick={() => window.location.reload()} className="btn btn-primary">
@@ -360,8 +354,7 @@ export function Typeracer() {
           value={userInput}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          className="input"
-          style={{ marginTop: '16px' }}
+          className="input text-with-margin-top"
           placeholder={phase === 'playing' ? 'Start typing...' : 'Game starting...'}
           disabled={phase !== 'playing'}
           autoComplete="off"

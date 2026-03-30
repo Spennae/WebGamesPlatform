@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import { Typeracer } from './Typeracer';
-import { RulesCard, RuleStep } from '../components';
+import { RulesCard, RuleStep, Highlight } from '../components';
 
 type GamePhase = 'rules' | 'playing';
 
@@ -13,16 +13,16 @@ function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
         <div className="rules-section-title">How to Play</div>
         <div className="rules-steps">
           <RuleStep number={1}>
-            Type the text shown as <span style={{ color: 'var(--text-primary)' }}>quickly</span> and <span style={{ color: 'var(--text-primary)' }}>accurately</span> as you can
+            Type the text shown as <Highlight>quickly</Highlight> and <Highlight>accurately</Highlight> as you can
           </RuleStep>
           <RuleStep number={2}>
-            You have <span style={{ color: 'var(--accent-red)', fontWeight: 600 }}>60 seconds</span> to complete the race
+            You have <Highlight color="var(--accent-red)">60 seconds</Highlight> to complete the race
           </RuleStep>
           <RuleStep number={3}>
-            Your <span style={{ color: 'var(--accent-green)' }}>WPM</span> (words per minute) and <span style={{ color: 'var(--accent-blue)' }}>accuracy</span> are tracked
+            Your <Highlight color="var(--accent-green)">WPM</Highlight> (words per minute) and <Highlight color="var(--accent-blue)">accuracy</Highlight> are tracked
           </RuleStep>
           <RuleStep number={4}>
-            Log in to save your score to the <span style={{ color: 'var(--accent-yellow)' }}>leaderboard</span>
+            Log in to save your score to the <Highlight color="var(--accent-yellow)">leaderboard</Highlight>
           </RuleStep>
         </div>
       </div>
@@ -31,7 +31,7 @@ function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
         Play
       </button>
 
-      <Link to="/" className="text-link" style={{ marginTop: '16px' }}>
+      <Link to="/" className="text-link text-link-with-margin">
         Back to Games
       </Link>
     </RulesCard>
