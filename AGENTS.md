@@ -86,10 +86,11 @@ WebGamesPlatform/
 ## Architecture Decisions
 
 1. **Auth**: JWT tokens stored in localStorage on frontend
-2. **Game Scores**: Engines submit scores through .NET API (not direct DB)
-3. **Database**: Auto-creates tables on startup (EnsureCreated)
-4. **Modularity**: Each game is an independent service
-5. **CORS**: API allows all origins for development
+2. **Guest Play**: Guests can play games but cannot save scores; guest state stored in sessionStorage
+3. **Game Scores**: Engines submit scores through .NET API (not direct DB)
+4. **Database**: Auto-creates tables on startup (EnsureCreated)
+5. **Modularity**: Each game is an independent service
+6. **CORS**: API allows all origins for development
 
 ## API Endpoints
 
@@ -244,3 +245,56 @@ export function PlayPage() {
 - **Score submission** to API leaderboard
 - **Leaderboard display** after race completion
 - **"Race Again" button** with WebSocket reconnection
+- **Guest play** supported - can play without logging in
+- **Score saving** for guests: score saved to sessionStorage, submitted after login/register
+
+## Guest Play Pattern
+
+### Guest State (useAuth hook)
+Guest users have limited access but can play games:
+- `isGuest: boolean` - true if playing as guest
+- `guestId: string` - unique guest identifier
+- Guest state stored in **sessionStorage** (cleared on browser close)
+
+### Login/Register Return URL
+When redirecting users to login or register, preserve the return URL:
+```tsx
+// Navigate to login with return URL
+navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);
+
+// In LoginPage and RegisterPage
+const returnUrl = searchParams.get('returnUrl') || '/';
+navigate(returnUrl, { replace: true });
+```
+
+When linking from login to register, pass the returnUrl:
+```tsx
+<Link to={`/register?returnUrl=${encodeURIComponent(returnUrl)}`}>
+  Create one
+</Link>
+```
+
+### Pending Score Pattern
+When a guest finishes a game and logs in, restore their score:
+```tsx
+// After game ends, save to sessionStorage
+sessionStorage.setItem('pendingScore', JSON.stringify({ wpm, accuracy }));
+
+// In game component, on mount:
+useEffect(() => {
+  const savedScore = sessionStorage.getItem('pendingScore');
+  if (savedScore && !isGuest) {
+    const { wpm, accuracy } = JSON.parse(savedScore);
+    sessionStorage.removeItem('pendingScore');
+    await submitScore(wpm, accuracy);
+    fetchLeaderboard();
+  }
+}, [isGuest]);
+```
+
+### Game Page Bypass Rules
+If returning from login with a pending score, skip the rules page:
+```tsx
+const hasPendingScore = sessionStorage.getItem('pendingScore') !== null;
+const [phase, setPhase] = useState(hasPendingScore ? 'playing' : 'rules');
+```
