@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -13,7 +14,8 @@ interface LeaderboardEntry {
 }
 
 export function Typeracer() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<GamePhase>('waiting');
   const [text, setText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,6 +42,36 @@ export function Typeracer() {
   useEffect(() => { textRef.current = text; }, [text]);
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
   useEffect(() => { errorsRef.current = errors; }, [errors]);
+
+  const finishGame = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
+  };
+
+  const submitScore = async (wpm: number, accuracy: number) => {
+    if (isGuest) return;
+    
+    try {
+      await api.post('/api/scores', {
+        gameSlug: 'typeracer',
+        value: Math.round(wpm * 100),
+        metadata: { wpm, accuracy }
+      });
+    } catch (e) {
+      console.error('Failed to submit score:', e);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    if (isGuest) return;
+    
+    try {
+      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
+      setLeaderboard(response.data);
+    } catch (e) {
+      console.error('Failed to fetch leaderboard:', e);
+    }
+  };
 
   useEffect(() => {
     const checkEngineHealth = async () => {
@@ -107,30 +139,8 @@ export function Typeracer() {
     };
   }, [phase, startTime]);
 
-  const finishGame = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    sendMessage({ type: 'finish', progress: currentIndexRef.current, errors: errorsRef.current });
-  };
-
-  const submitScore = async (wpm: number, accuracy: number) => {
-    try {
-      await api.post('/api/scores', {
-        gameSlug: 'typeracer',
-        value: Math.round(wpm * 100),
-        metadata: { wpm, accuracy }
-      });
-    } catch (e) {
-      console.error('Failed to submit score:', e);
-    }
-  };
-
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await api.get<LeaderboardEntry[]>('/api/scores/typeracer?limit=10');
-      setLeaderboard(response.data);
-    } catch (e) {
-      console.error('Failed to fetch leaderboard:', e);
-    }
+  const handleLoginToSave = () => {
+    navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);
   };
 
   const startNewRace = () => {
@@ -219,6 +229,36 @@ export function Typeracer() {
             </div>
           </div>
 
+          {isGuest && (
+            <div style={{ 
+              background: 'rgba(249,226,175,0.1)', 
+              borderRadius: '8px', 
+              padding: '12px', 
+              marginBottom: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '14px', color: '#f9e2af', marginBottom: '8px' }}>
+                Guest scores are not saved
+              </div>
+              <button
+                onClick={handleLoginToSave}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#a6e3a1',
+                  color: '#1e1e2e',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Login to Save Your Score
+              </button>
+            </div>
+          )}
+
           <button
             onClick={startNewRace}
             style={{
@@ -236,52 +276,54 @@ export function Typeracer() {
           </button>
         </div>
 
-        <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
-          <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
+        {!isGuest && (
+          <div style={{ background: '#2b2c3f', borderRadius: '12px', padding: '16px' }}>
+            <div style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>Leaderboard</div>
 
-          {leaderboard.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {leaderboard.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: index % 2 === 0 ? '#2b2c3f' : '#313244'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
+            {leaderboard.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {leaderboard.map((entry, index) => (
+                  <div
+                    key={entry.id}
+                    style={{
                       display: 'flex',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      background: index === 0 ? 'rgba(249,226,175,0.25)' : 
-                                  index === 1 ? 'rgba(203,166,247,0.25)' :
-                                  index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
-                      color: index === 0 ? '#f9e2af' :
-                             index === 1 ? '#cba6f7' :
-                             index === 2 ? '#a6e3a1' : '#a6adc8'
-                    }}>
-                      {index + 1}
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: index % 2 === 0 ? '#2b2c3f' : '#313244'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        background: index === 0 ? 'rgba(249,226,175,0.25)' : 
+                                    index === 1 ? 'rgba(203,166,247,0.25)' :
+                                    index === 2 ? 'rgba(166,227,161,0.25)' : '#45475a',
+                        color: index === 0 ? '#f9e2af' :
+                               index === 1 ? '#cba6f7' :
+                               index === 2 ? '#a6e3a1' : '#a6adc8'
+                      }}>
+                        {index + 1}
+                      </div>
+                      <span>{entry.username}</span>
                     </div>
-                    <span>{entry.username}</span>
+                    <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
                   </div>
-                  <span style={{ fontWeight: 600, color: '#a6e3a1' }}>{(entry.value / 100).toFixed(2)} WPM</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: '14px', color: '#a6adc8' }}>No scores yet</div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -347,8 +389,8 @@ export function Typeracer() {
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: 'rgba(137,180,250,0.15)', color: '#89b4fa', fontSize: '12px' }}>
-          {user?.username}
+        <span style={{ padding: '6px 12px', borderRadius: '9999px', background: isGuest ? 'rgba(249,226,175,0.15)' : 'rgba(137,180,250,0.15)', color: isGuest ? '#f9e2af' : '#89b4fa', fontSize: '12px' }}>
+          {isGuest ? 'Guest' : user?.username}
         </span>
         <div style={{ fontSize: '12px', color: '#a6adc8' }}>
           Errors: <span style={{ fontWeight: 600, color: '#f38ba8' }}>{errors}</span>

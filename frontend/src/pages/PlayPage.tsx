@@ -36,7 +36,7 @@ function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(166,227,161,0.2)', color: '#a6e3a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>4</div>
               <div style={{ fontSize: '14px', color: '#a6adc8', lineHeight: '20px' }}>
-                Submit your score to the <span style={{ color: '#f9e2af' }}>leaderboard</span>
+                Log in to save your score to the <span style={{ color: '#f9e2af' }}>leaderboard</span>
               </div>
             </div>
           </div>
