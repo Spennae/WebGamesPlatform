@@ -111,7 +111,7 @@ export function LoginPage() {
 
         <p className="text-center text-text-secondary mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="form-link">
+          <Link to={`/register?returnUrl=${encodeURIComponent(returnUrl)}`} className="form-link">
             Create one
           </Link>
         </p>
