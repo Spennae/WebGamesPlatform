@@ -39,6 +39,7 @@ export function LoginPage() {
   };
 
   const handleGuestPlay = () => {
+    sessionStorage.setItem('authPromptSeen', 'true');
     loginAsGuest();
     navigate(returnUrl, { replace: true });
   };
