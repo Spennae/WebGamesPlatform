@@ -1,4 +1,4 @@
-import type { User, Game, Score, AuthResponse, RegisterRequest, LoginRequest, ScoreRequest } from '../types';
+import type { User, Game, Score, AuthResponse, RegisterRequest, LoginRequest, ScoreRequest, Feedback, SubmitFeedbackRequest, UpdateFeedbackStatusRequest } from '../types';
 import api from './api';
 
 export const authService = {
@@ -40,6 +40,23 @@ export const scoreService = {
 
   getScores: async (gameSlug: string, limit = 10): Promise<Score[]> => {
     const response = await api.get<Score[]>(`/api/scores/${gameSlug}?limit=${limit}`);
+    return response.data;
+  },
+};
+
+export const feedbackService = {
+  submitFeedback: async (data: SubmitFeedbackRequest): Promise<Feedback> => {
+    const response = await api.post<Feedback>('/api/feedback', data);
+    return response.data;
+  },
+
+  getAllFeedback: async (): Promise<Feedback[]> => {
+    const response = await api.get<Feedback[]>('/api/feedback');
+    return response.data;
+  },
+
+  updateFeedbackStatus: async (id: number, data: UpdateFeedbackStatusRequest): Promise<Feedback> => {
+    const response = await api.patch<Feedback>(`/api/feedback/${id}/status`, data);
     return response.data;
   },
 };

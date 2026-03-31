@@ -66,6 +66,11 @@ WebGamesPlatform/
 - Include navigation properties for relationships
 - Use Data Annotations for validation
 
+### Admin Authorization
+- Users have `IsAdmin` (bool) field in database
+- Admin endpoints check `user.IsAdmin` before allowing access
+- Response DTOs include `isAdmin` field
+
 ### React Components
 - Location: `/components/` or `/pages/`
 - File naming: PascalCase (e.g., `LoginPage.tsx`)
@@ -104,6 +109,9 @@ WebGamesPlatform/
 | GET | /api/games/{slug} | No | Get game by slug |
 | POST | /api/scores | Yes | Submit score |
 | GET | /api/scores/{gameSlug} | No | Get leaderboard |
+| POST | /api/feedback | Yes | Submit feedback |
+| GET | /api/feedback | Yes (Admin) | List all feedback |
+| PATCH | /api/feedback/{id}/status | Yes (Admin) | Update feedback status |
 
 ## Commands
 
@@ -245,7 +253,6 @@ export function PlayPage() {
 - **Score submission** to API leaderboard
 - **Leaderboard display** after race completion
 - **"Race Again" button** with WebSocket reconnection
-<<<<<<< HEAD
 - **Guest play** supported - can play without logging in
 - **Score saving** for guests: score saved to sessionStorage, submitted after login/register
 
