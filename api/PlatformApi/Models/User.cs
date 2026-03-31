@@ -20,5 +20,7 @@ public class User
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public bool IsAdmin { get; set; }
+
     public ICollection<Score> Scores { get; set; } = new List<Score>();
 }

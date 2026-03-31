@@ -43,7 +43,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
+    <div className="home-container">
       <div className="page-header">
         <h1 className="page-title">Available Games</h1>
         <p className="page-subtitle">Choose a game and start playing</p>
@@ -54,10 +54,10 @@ export function HomePage() {
           <p className="text-text-secondary">No games available yet. Check back soon!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="game-grid">
           {games.map((game) => (
             <div key={game.id} className="game-card">
-              <div className="flex items-start justify-between mb-3">
+              <div className="game-card-header">
                 <h2 className="game-card-title">{game.name}</h2>
                 <span className="tag tag-blue">New</span>
               </div>

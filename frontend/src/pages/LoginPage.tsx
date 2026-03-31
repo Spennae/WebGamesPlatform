@@ -27,6 +27,7 @@ export function LoginPage() {
         username: response.username,
         email: response.email,
         createdAt: '',
+        isAdmin: response.isAdmin,
       };
       login(response.token, user);
       navigate(returnUrl, { replace: true });
