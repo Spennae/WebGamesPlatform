@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import { Typeracer } from './Typeracer';
 import { RulesCard, RuleStep, Highlight } from '../components';
+import { useAuth } from '../hooks/useAuth';
 
-type GamePhase = 'rules' | 'playing';
+type GamePhase = 'auth' | 'rules' | 'playing';
 
 function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
   return (
@@ -40,13 +41,29 @@ function TypeRacerRules({ onPlay }: { onPlay: () => void }) {
 
 export function PlayPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const hasPendingScore = typeof window !== 'undefined' && sessionStorage.getItem('pendingScore') !== null;
-  const [phase, setPhase] = useState<GamePhase>(hasPendingScore ? 'playing' : 'rules');
+  const authPromptSeen = typeof window !== 'undefined' && sessionStorage.getItem('authPromptSeen') === 'true';
+  const [phase, setPhase] = useState<GamePhase>(() => {
+    if (hasPendingScore) return 'playing';
+    if (isAuthenticated || authPromptSeen) return 'rules';
+    return 'auth';
+  });
+
+  useEffect(() => {
+    if (phase === 'auth' && !hasPendingScore) {
+      const returnUrl = `/play/${slug}`;
+      navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`, { replace: true });
+    }
+  }, [phase, hasPendingScore, navigate, slug]);
 
   if (slug === 'typeracer') {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
-        {phase === 'rules' ? (
+        {phase === 'auth' ? (
+          <div className="text-center">Loading...</div>
+        ) : phase === 'rules' ? (
           <TypeRacerRules onPlay={() => setPhase('playing')} />
         ) : (
           <Typeracer />
