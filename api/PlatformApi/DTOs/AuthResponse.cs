@@ -8,5 +8,4 @@ public class AuthResponse
     public string Email { get; set; } = string.Empty;
     public bool IsAdmin { get; set; }
     public DateTime ExpiresAt { get; set; }
-    public bool IsAdmin { get; set; }
 }
