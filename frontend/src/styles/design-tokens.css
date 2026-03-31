@@ -33,6 +33,9 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
+  /* Text Sizes */
+  --text-3xl: 2.25rem;
+
   /* Border Radius */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;

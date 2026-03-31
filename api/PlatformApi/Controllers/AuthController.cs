@@ -51,7 +51,8 @@ public class AuthController : ControllerBase
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
-            ExpiresAt = expiresAt
+            ExpiresAt = expiresAt,
+            IsAdmin = user.IsAdmin
         });
     }
 
@@ -72,7 +73,8 @@ public class AuthController : ControllerBase
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
-            ExpiresAt = expiresAt
+            ExpiresAt = expiresAt,
+            IsAdmin = user.IsAdmin
         });
     }
 

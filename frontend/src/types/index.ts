@@ -3,6 +3,7 @@ export interface User {
   username: string;
   email: string;
   createdAt: string;
+  isAdmin?: boolean;
 }
 
 export interface Game {
@@ -27,6 +28,7 @@ export interface AuthResponse {
   username: string;
   email: string;
   expiresAt: string;
+  isAdmin: boolean;
 }
 
 export interface RegisterRequest {
