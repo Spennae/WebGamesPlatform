@@ -256,6 +256,66 @@ export function PlayPage() {
 - **Guest play** supported - can play without logging in
 - **Score saving** for guests: score saved to sessionStorage, submitted after login/register
 
+### TypeRacer Multiplayer Room Management (Issue #27 - Complete)
+The Go engine now supports multiplayer rooms for real-time racing:
+
+#### Room Configuration
+| Setting | Value |
+|---------|-------|
+| Room codes | 4-char alphanumeric (excludes 0, O, 1, I, L) |
+| Player limit | 2-4 players per room |
+| Room expiration | 90 seconds after last player leaves |
+| Race start | All players must click "Ready" → 3-2-1 countdown |
+
+#### WebSocket URL Format
+```
+ws://localhost:5000/api/engine/typeracer?room=X7K9&username=Sam
+```
+- No `room` param = create new room
+- With `room` param = join existing room
+- Username required for multiplayer
+
+#### Room Message Protocol
+
+**Client → Server:**
+| Type | Payload | Description |
+|------|---------|-------------|
+| `join` | `{roomCode, username}` | Join/create room (via URL) |
+| `leave` | - | Leave room (disconnect) |
+| `ready` | - | Mark ready to race |
+| `notReady` | - | Un-ready |
+| `typing` | `{progress, errors}` | Live progress update |
+| `finish` | `{progress, errors}` | Race finished |
+
+**Server → Client:**
+| Type | Payload | Description |
+|------|---------|-------------|
+| `roomCreated` | `{roomCode}` | New room created (first player) |
+| `roomJoined` | `{roomCode, players}` | Joined room |
+| `error` | `{text}` | Error joining room |
+| `playerJoined` | `{username}` | New player in room |
+| `playerLeft` | `{username}` | Player left room |
+| `playerReady` | `{username}` | Player marked ready |
+| `playerNotReady` | `{username}` | Player un-readied |
+| `allReady` | `{count: 3}` | Countdown starting |
+| `countdown` | `{count: 2/1}` | Countdown tick |
+| `countdownCancelled` | - | Someone un-readied |
+| `gameStart` | `{text, timeLimit}` | Race begins (same text for all) |
+| `opponentProgress` | `{username, progress}` | Other player's progress |
+| `gameEnd` | `{wpm, accuracy, count: placement}` | Results |
+
+#### Room State Machine
+```
+WAITING (players join, set ready/unready)
+    ↓ all players ready (min 2)
+COUNTDOWN (3-2-1 timer, cancellable if someone un-readies)
+    ↓ count reaches 0
+RACING (all players type same text, progress broadcast)
+    ↓ all finished or timeout
+FINISHED (results sent to each player)
+    ↓ cleanup, room stays for new race
+```
+
 ## Guest Play Pattern
 
 ### Guest State (useAuth hook)
