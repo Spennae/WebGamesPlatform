@@ -72,7 +72,20 @@ MYSQL_DATABASE=webgames
 ### TypeRacer
 Test your typing speed! Race against the clock and climb the leaderboard.
 
-(Coming soon: multiplayer mode)
+**Features:**
+- Single-player mode: Practice at your own pace
+- Multiplayer mode: Race against other players in real-time
+
+**Multiplayer:**
+- Create a room to get a 4-character room code
+- Share the code with friends to join your race
+- All players race the same text simultaneously
+- See your opponents' progress in real-time
+- Results show placement (1st, 2nd, etc.)
+
+**WebSocket URL:** `ws://localhost:5000/api/engine/typeracer?room=CODE&username=NAME`
+- Omit `room` to create a new room
+- Use `room=CODE` to join an existing room
 
 ## Documentation
 

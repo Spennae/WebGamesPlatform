@@ -27,6 +27,17 @@ public class EngineController : ControllerBase
 
         var engineWsUrl = engineUrl.Replace("http://", "ws://").Replace("https://", "wss://") + "/ws";
 
+        var room = HttpContext.Request.Query["room"].ToString();
+        var username = HttpContext.Request.Query["username"].ToString();
+
+        if (!string.IsNullOrEmpty(room) || !string.IsNullOrEmpty(username))
+        {
+            var queryParams = new List<string>();
+            if (!string.IsNullOrEmpty(room)) queryParams.Add($"room={Uri.EscapeDataString(room)}");
+            if (!string.IsNullOrEmpty(username)) queryParams.Add($"username={Uri.EscapeDataString(username)}");
+            engineWsUrl += "?" + string.Join("&", queryParams);
+        }
+
         _logger.LogInformation("Proxying WebSocket connection to {Url}", engineWsUrl);
 
         if (!HttpContext.WebSockets.IsWebSocketRequest)
