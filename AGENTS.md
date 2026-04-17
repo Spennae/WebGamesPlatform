@@ -1,368 +1,133 @@
 # AGENTS.md - AI Agent Guidelines
 
-> **Note:** Agents should keep this file updated as the project evolves.
-
-## Project Overview
-
-WebGamesPlatform is a modular web-based gaming platform supporting multiple games. Each game runs as its own service, communicating with a central .NET API.
+> **Note:** Keep this file updated as project evolves.
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Backend API | .NET 8 (C#) |
-| Frontend | React + TypeScript + Tailwind CSS |
-| Game Engine | Go + WebSockets |
+| Backend | .NET 8 (C#), Controllers in `/api/PlatformApi/Controllers/` |
+| Frontend | React 19 + TypeScript + Tailwind 4 + Vite |
+| Game Engine | Go + WebSockets (`/engines/typeracer/`) |
 | Database | MySQL 8.0 |
-| Container | Docker Compose |
 
-## Project Structure
+## Commands
 
-```
-WebGamesPlatform/
-├── api/PlatformApi/     # .NET Web API
-│   ├── Controllers/     # API endpoints
-│   ├── Models/          # Database entities (User, Game, Score)
-│   ├── DTOs/           # Request/Response objects
-│   ├── Data/           # EF Core DbContext
-│   └── Program.cs      # App entry point
-├── frontend/            # React application
-│   ├── src/
-│   │   ├── components/ # Reusable UI components
-│   │   ├── pages/      # Page components
-│   │   ├── hooks/      # Custom React hooks
-│   │   ├── services/    # API client services
-│   │   └── types/      # TypeScript type definitions
-│   └── package.json
-├── engines/             # Game services
-│   └── typeracer/       # TypeRacer typing game engine (Go + WebSockets)
-├── db/                  # Database scripts
-├── docker/              # Docker configurations
-└── scripts/             # Utility scripts (start.sh, stop.sh)
+```bash
+# Docker (full stack)
+docker compose up -d           # start
+docker compose up -d --build   # rebuild
+docker compose logs -f api     # watch logs
+
+# Frontend
+cd frontend && npm run dev     # dev server
+npm run build                 # production build
+npm run lint                 # lint
+
+# Backend
+cd api/PlatformApi && dotnet build && dotnet run
+
+# Scripts
+./scripts/start.sh            # Docker + frontend + browser
+./scripts/stop.sh             # stop everything
 ```
 
 ## Conventions
 
-### Git Workflow
-- Work on **feature branches** per issue
-- Branch naming: `feature/<issue-number>-description` or `fix/<issue-number>-description`
-- Create PR and merge after testing
-- Commit after each completed task
+### .NET API
+- Controllers: `[Resource]Controller.cs` in `/Controllers/`
+- DTOs: `/DTOs/` as `[Action]Request.cs` or `[Action]Response.cs`
+- Models: `/Models/` with Data Annotations
+- Protected endpoints: `[Authorize]` attribute
+- Admin: check `user.IsAdmin` before access
 
-### API Endpoints (.NET)
-- Use **Controllers** for API endpoints (not Minimal APIs)
-- Name controllers: `[Resource]Controller.cs`
-- All endpoints under `/api/` prefix
-- Use `[Authorize]` attribute for protected endpoints
+### Frontend
+- Components: `/components/` or `/pages/`, PascalCase
+- Styling: Use `src/styles/design-tokens.css` - CSS variables only
+- No raw hex colors; 90% neutral UI, 10% accent
 
-### DTOs
-- Location: `/DTOs/`
-- Naming: `[Action]Request.cs` or `[Action]Response.cs`
-- Example: `RegisterRequest.cs`, `AuthResponse.cs`
+### Git
+- Branches: `feature/<issue>-description`
+- Commit after each task, PR after testing
 
-### Models
-- Location: `/Models/`
-- Match database tables
-- Include navigation properties for relationships
-- Use Data Annotations for validation
+## Architecture
 
-### Admin Authorization
-- Users have `IsAdmin` (bool) field in database
-- Admin endpoints check `user.IsAdmin` before allowing access
-- Response DTOs include `isAdmin` field
-
-### React Components
-- Location: `/components/` or `/pages/`
-- File naming: PascalCase (e.g., `LoginPage.tsx`)
-- Use functional components with hooks
-- Tailwind CSS for styling
-
-### Styling
-- **See [docs/style-guide.md](docs/style-guide.md)** for full styling conventions
-- Use design tokens from `src/styles/design-tokens.css`
-- Keep UI neutral (90%) with accents (10%)
-- No raw hex colors - use CSS variables only
-
-### Configuration
-- All settings in `appsettings.json`
-- Environment-specific: `appsettings.Development.json`
-- No hardcoded values
-
-## Architecture Decisions
-
-1. **Auth**: JWT tokens stored in localStorage on frontend
-2. **Guest Play**: Guests can play games but cannot save scores; guest state stored in sessionStorage
-3. **Game Scores**: Engines submit scores through .NET API (not direct DB)
-4. **Database**: Auto-creates tables on startup (EnsureCreated)
-5. **Modularity**: Each game is an independent service
-6. **CORS**: API allows all origins for development
+| Pattern | Implementation |
+|---------|-----------------|
+| Auth | JWT in localStorage, 60min expiry |
+| Guest play | `isGuest: boolean` + `guestId` in sessionStorage |
+| Game scores | Submit via API, not direct to DB |
+| Modularity | Each game = separate service |
 
 ## API Endpoints
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | /health | No | Health check |
-| POST | /api/auth/register | No | Register new user |
+| POST | /api/auth/register | No | Register |
 | POST | /api/auth/login | No | Login |
-| GET | /api/users/me | Yes | Get current user |
-| GET | /api/games | No | List all games |
-| GET | /api/games/{slug} | No | Get game by slug |
+| GET | /api/users/me | Yes | Current user |
+| GET | /api/games | No | List games |
+| GET | /api/games/{slug} | No | Get game |
 | POST | /api/scores | Yes | Submit score |
-| GET | /api/scores/{gameSlug} | No | Get leaderboard |
+| GET | /api/scores/{gameSlug} | No | Leaderboard |
 | POST | /api/feedback | Yes | Submit feedback |
-| GET | /api/feedback | Yes (Admin) | List all feedback |
-| PATCH | /api/feedback/{id}/status | Yes (Admin) | Update feedback status |
+| GET | /api/feedback | Yes (Admin) | List feedback |
+| PATCH | /api/feedback/{id}/status | Yes (Admin) | Update status |
 
-## Commands
+## TypeRacer Multiplayer
 
-### Docker
-```bash
-# Start all services
-docker compose up -d
-
-# Rebuild after changes
-docker compose up -d --build
-
-# View logs
-docker compose logs api
-docker compose logs mysql
-
-# Stop services
-docker compose down
-```
-
-### Backend (.NET)
-```bash
-cd api/PlatformApi
-
-# Build
-dotnet build
-
-# Run locally (requires MySQL running)
-dotnet run
-
-# Run tests
-dotnet test
-```
-
-### Frontend
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Run dev server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### Database
-```bash
-# Connect to MySQL
-docker compose exec mysql mysql -u root -p
-```
-
-### Scripts
-```bash
-# Start everything (Docker + Frontend + opens browser)
-./scripts/start.sh
-
-# Stop everything
-./scripts/stop.sh
-```
-
-### Git
-```bash
-# Create feature branch
-git checkout -b feature/1-description
-
-# Commit after task completion
-git add -A && git commit -m "description"
-
-# Push and create PR
-git push -u origin feature/1-description
-gh pr create --title "Title" --body "Description"
-
-# Merge PR
-gh pr merge <number> --squash --delete-branch
-```
-
-## Testing API
-
-```bash
-# Health check
-curl http://localhost:5000/health
-
-# Register
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@example.com","password":"password123"}'
-
-# Login
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-
-# Get games (with token)
-curl http://localhost:5000/api/games
-```
-
-## Important Notes
-
-- JWT tokens expire after 60 minutes (configurable)
-- Game engines communicate via WebSockets
-- Scores are stored through the API, not directly from engines
-- The platform is designed to be extensible - new games can be added as separate services
-- Keep this file updated when project structure or conventions change
-
-## Game Implementation Pattern
-
-### Rules Page Pattern
-Each game should have a rules page that displays before starting the game:
-1. Game title and description
-2. Numbered steps explaining how to play
-3. "Play" button to start the game
-4. "Back to Games" link
-
-Example in `PlayPage.tsx`:
-```tsx
-type GamePhase = 'rules' | 'playing';
-
-function GameRules({ onPlay }: { onPlay: () => void }) {
-  return (
-    <div style={{ maxWidth: '500px', margin: '0 auto', padding: '40px 16px' }}>
-      {/* Rules content */}
-      <button onClick={onPlay}>Play</button>
-    </div>
-  );
-}
-
-export function PlayPage() {
-  const [phase, setPhase] = useState<GamePhase>('rules');
-  // Render rules or game based on phase
-}
-```
-
-### TypeRacer Game (Phase 3 - Complete)
-- **Go WebSocket server** at `/engines/typeracer` with 100 text samples
-- **Rules page** at `/play/typeracer` before starting
-- **Live WPM tracking** during gameplay
-- **Score submission** to API leaderboard
-- **Leaderboard display** after race completion
-- **"Race Again" button** with WebSocket reconnection
-- **Guest play** supported - can play without logging in
-- **Score saving** for guests: score saved to sessionStorage, submitted after login/register
-
-### TypeRacer Multiplayer Room Management (Issue #27 - Complete)
-The Go engine now supports multiplayer rooms for real-time racing:
-
-#### Room Configuration
-| Setting | Value |
-|---------|-------|
-| Room codes | 4-char alphanumeric (excludes 0, O, 1, I, L) |
-| Player limit | 2-4 players per room |
-| Room expiration | 90 seconds after last player leaves |
-| Race start | All players must click "Ready" → 3-2-1 countdown |
-
-#### WebSocket URL Format
-```
-ws://localhost:5000/api/engine/typeracer?room=X7K9&username=Sam
-```
-- No `room` param = create new room
-- With `room` param = join existing room
-- Username required for multiplayer
-
-#### Room Message Protocol
+**WebSocket:** `ws://localhost:5000/api/engine/typeracer?room=CODE&username=NAME`
+- No `room` = create new room (4-char code)
+- `room` param = join existing
+- Min 2, max 4 players
 
 **Client → Server:**
-| Type | Payload | Description |
-|------|---------|-------------|
-| `join` | `{roomCode, username}` | Join/create room (via URL) |
-| `leave` | - | Leave room (disconnect) |
-| `ready` | - | Mark ready to race |
-| `notReady` | - | Un-ready |
-| `typing` | `{progress, errors}` | Live progress update |
-| `finish` | `{progress, errors}` | Race finished |
+- `join` / `leave` - room management
+- `ready` / `notReady` - race start trigger
+- `typing` / `finish` - progress updates
 
 **Server → Client:**
-| Type | Payload | Description |
-|------|---------|-------------|
-| `roomCreated` | `{roomCode}` | New room created (first player) |
-| `roomJoined` | `{roomCode, players}` | Joined room |
-| `error` | `{text}` | Error joining room |
-| `playerJoined` | `{username}` | New player in room |
-| `playerLeft` | `{username}` | Player left room |
-| `playerReady` | `{username}` | Player marked ready |
-| `playerNotReady` | `{username}` | Player un-readied |
-| `allReady` | `{count: 3}` | Countdown starting |
-| `countdown` | `{count: 2/1}` | Countdown tick |
-| `countdownCancelled` | - | Someone un-readied |
-| `gameStart` | `{text, timeLimit}` | Race begins (same text for all) |
-| `opponentProgress` | `{username, progress}` | Other player's progress |
-| `gameEnd` | `{wpm, accuracy, count: placement}` | Results |
+- `roomCreated` / `roomJoined` / `error`
+- `playerJoined` / `playerLeft` / `playerReady` / `playerNotReady`
+- `allReady` → `countdown` (3-2-1) → `gameStart`
+- `opponentProgress` - live race updates
+- `gameEnd` - results with placement
 
-#### Room State Machine
-```
-WAITING (players join, set ready/unready)
-    ↓ all players ready (min 2)
-COUNTDOWN (3-2-1 timer, cancellable if someone un-readies)
-    ↓ count reaches 0
-RACING (all players type same text, progress broadcast)
-    ↓ all finished or timeout
-FINISHED (results sent to each player)
-    ↓ cleanup, room stays for new race
-```
+**State:** WAITING → COUNTDOWN → RACING → FINISHED
 
 ## Guest Play Pattern
 
-### Guest State (useAuth hook)
-Guest users have limited access but can play games:
-- `isGuest: boolean` - true if playing as guest
-- `guestId: string` - unique guest identifier
-- Guest state stored in **sessionStorage** (cleared on browser close)
-
-### Login/Register Return URL
-When redirecting users to login or register, preserve the return URL:
 ```tsx
-// Navigate to login with return URL
+// Redirect to login with return URL
 navigate(`/login?returnUrl=${encodeURIComponent('/play/typeracer')}`);
 
-// In LoginPage and RegisterPage
-const returnUrl = searchParams.get('returnUrl') || '/';
-navigate(returnUrl, { replace: true });
-```
-
-When linking from login to register, pass the returnUrl:
-```tsx
-<Link to={`/register?returnUrl=${encodeURIComponent(returnUrl)}`}>
-  Create one
-</Link>
-```
-
-### Pending Score Pattern
-When a guest finishes a game and logs in, restore their score:
-```tsx
-// After game ends, save to sessionStorage
-sessionStorage.setItem('pendingScore', JSON.stringify({ wpm, accuracy }));
-
-// In game component, on mount:
+// After login, restore pending score
 useEffect(() => {
-  const savedScore = sessionStorage.getItem('pendingScore');
-  if (savedScore && !isGuest) {
-    const { wpm, accuracy } = JSON.parse(savedScore);
+  const saved = sessionStorage.getItem('pendingScore');
+  if (saved && !isGuest) {
+    const { wpm, accuracy } = JSON.parse(saved);
     sessionStorage.removeItem('pendingScore');
-    await submitScore(wpm, accuracy);
-    fetchLeaderboard();
+    submitScore(wpm, accuracy);
   }
 }, [isGuest]);
 ```
 
-### Game Page Bypass Rules
-If returning from login with a pending score, skip the rules page:
+## Game Implementation
+
+Rules page first, then gameplay:
 ```tsx
-const hasPendingScore = sessionStorage.getItem('pendingScore') !== null;
-const [phase, setPhase] = useState(hasPendingScore ? 'playing' : 'rules');
+type GamePhase = 'rules' | 'playing';
+const [phase, setPhase] = useState(sessionStorage.getItem('pendingScore') ? 'playing' : 'rules');
 ```
+
+## Notes
+
+- Database auto-creates tables on startup (EnsureCreated)
+- CORS allows all origins (development)
+- Game engines communicate via WebSockets
+- Scores stored through API, not directly from engines
+
+## Documentation
+
+- [Style Guide](docs/style-guide.md) - Design tokens, component specs
